@@ -1,0 +1,15 @@
+devel/
+build/
+logs/
+.catkin_tools/
+catkin_workspace
+
+*.o
+*.pyc
+
+src/.rosinstall.bak
+src/*
+!src/bot*
+!src/.rosinstall
+*compile_commands.json
+
