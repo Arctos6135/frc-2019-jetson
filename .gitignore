@@ -11,6 +11,6 @@ src/.rosinstall.bak
 src/*
 !src/bot*
 !src/.rosinstall
-!src/usb_cam
+!src/usb_cam*
 *compile_commands.json
 
