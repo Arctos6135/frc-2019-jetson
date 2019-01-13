@@ -40,6 +40,7 @@
 #include <camera_info_manager/camera_info_manager.h>
 #include <sstream>
 #include <std_srvs/Empty.h>
+#include <std_msgs/Int32.h>
 
 namespace usb_cam {
 
@@ -65,7 +66,7 @@ public:
   UsbCam cam_;
 
   ros::ServiceServer service_start_, service_stop_;
-
+  ros::Subscriber exposure_sub_;
 
 
   bool service_start_cap(std_srvs::Empty::Request  &req, std_srvs::Empty::Response &res )
@@ -121,6 +122,7 @@ public:
     // create Services
     service_start_ = node_.advertiseService("start_capture", &UsbCamNode::service_start_cap, this);
     service_stop_ = node_.advertiseService("stop_capture", &UsbCamNode::service_stop_cap, this);
+	exposure_sub_ = node_.subscribe("exposure", 2, &UsbCamNode::exposure_cb, this);
 
     // check for default camera info
     if (!cinfo_->isCalibrated())
@@ -258,7 +260,17 @@ public:
   }
 
 
-
+  void exposure_cb(const std_msgs::Int32ConstPtr& msg) {
+    if(msg->data <= 0) {
+	  // Turn auto exposure back on if the exposure is 0 or less
+      cam_.set_v4l_parameter("exposure_auto", 3);
+	}
+	else {
+	  // Turn off auto exposure so that setting the exposure will work
+	  cam_.set_v4l_parameter("exposure_auto", 1);
+      cam_.set_v4l_parameter("exposure_absolute", msg->data);
+	}
+  }
 
 
 
