@@ -14,3 +14,5 @@ src/*
 !src/usb_cam*
 *compile_commands.json
 
+*.swp
+
