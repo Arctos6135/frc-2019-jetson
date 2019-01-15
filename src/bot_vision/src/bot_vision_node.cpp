@@ -11,6 +11,9 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
+#include <vector>
+#include <cmath>
+
 extern bool vision_on;
 // Publisher for final angle (result of processing)
 ros::Publisher result_pub;
@@ -23,6 +26,11 @@ int thresh_low_s = 80;
 int thresh_low_v = 70;
 
 int morph_kernel_size = 5;
+
+int camera_horiz_fov = 53;
+int camera_width = 640;
+int camera_width = 480;
+
 // The image processing callback
 void image_callback(const sensor_msgs::ImageConstPtr& msg) {
 	if(vision_on) {
@@ -38,8 +46,41 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
 		cv::morphologyEx(mono, mono, cv::MORPH_OPEN, kernel);
 		cv::morphologyEx(mono, mono, cv::MORPH_CLOSE, kernel);
 
-		cv::imshow("view", mono);
-		cv::waitKey(30);
+        // Find contours
+        std::vector<std::vector<cv::Point>> contours;
+        // Return as list and simplify to only end points
+        cv::findContours(mono, contours, cv::CV_RETR_LIST, cv::CV_CHAIN_APPROX_SIMPLE);
+
+        // Find bounding rects for each contour
+        std::vector<cv::RotatedRect> rects;
+        for(auto contour : contours) {
+            // Add checks here if necessary
+            rects.push_back(cv::minAreaRect(contour));
+        }
+
+        double x_angle = NAN;
+        
+        if(rects.size() >= 2) {
+            // Find the two biggest contours
+            int biggest = -1;
+            int second_biggest = -1;
+            for(int i = 0; i < rects.size(); rects++) {
+                if(biggest == -1 || rects[i].size.area() > rects[biggest].size.area()) {
+                    second_biggest = biggest;
+                    biggest = i;
+                }
+                else if(second_biggest == -1 || rects[i].size.area() > rects[second_biggest].size.area()) {
+                    second_biggest = i;
+                }
+            }
+
+            cv::Point2f mid1 = rects[biggest].center, mid2 = rects[second_biggest].center;
+            cv::Point2f mid((mid1.x + mid2.x) / 2, (mid1.y + mid2.y) / 2);
+
+        }
+
+		//cv::imshow("view", mono);
+		//cv::waitKey(30);
 	}
 }
 
@@ -86,6 +127,13 @@ int main(int argc, char **argv) {
 	// Get the parameter values
 	node_handle.param("vision_exposure", vision_exposure, 5);
 	node_handle.param("normal_exposure", normal_exposure, 0);
+    node_handle.param("thresh_high_h", thresh_high_h, thresh_high_h);
+    node_handle.param("thresh_high_s", thresh_high_s, thresh_high_s);
+    node_handle.param("thresh_high_v", thresh_high_v, thresh_high_v);
+    node_handle.param("thresh_low_h", thresh_low_h, thresh_low_h);
+    node_handle.param("thresh_low_s", thresh_low_s, thresh_low_s);
+    node_handle.param("thresh_low_v", thresh_low_v, thresh_low_v);
+    node_handle.param("morph_kernel_size", morph_kernel_size, morph_kernel_size);
 
 	// Set up image transport stuff
 	image_transport::ImageTransport im_transport(node_handle);
