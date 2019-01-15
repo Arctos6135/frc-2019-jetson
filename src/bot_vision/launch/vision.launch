@@ -1,0 +1,25 @@
+<launch>
+	<!-- Vision node -->
+	<node pkg="bot_vision" type="bot_vision_node" name="vision_processing_node" output="screen">
+		<!-- Exposure values -->
+		<param name="vision_exposure" value="5" />
+		<param name="normal_exposure" value="-1" />
+
+		<!-- Thresholding values -->
+		<param name="thresh_high_h" value="130" />
+		<param name="thresh_high_s" value="255" />
+		<param name="thresh_high_v" value="255" />
+		<param name="thresh_low_h" value="80" />
+		<param name="thresh_low_s" value="80" />
+		<param name="thresh_low_v" value="70" />
+		
+		<!-- Opening and closing kernel size -->
+		<param name="morph_kernel_size" value="5" />
+		
+		<!-- Camera properties -->
+		<param name="camera_horiz_fov" value="53" />
+		<param name="camera_width" value="640" />
+		<param name="camera_height" value="480" />
+	</node>
+</launch>
+
