@@ -12,6 +12,7 @@ src/*
 !src/bot*
 !src/.rosinstall
 !src/usb_cam*
+!src/nt_ros_translate
 *compile_commands.json
 
 *.swp
