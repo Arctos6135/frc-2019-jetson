@@ -12,7 +12,10 @@
 #include <opencv2/imgproc/imgproc.hpp>
 
 #include <vector>
+#define _USE_MATH_DEFINES
 #include <cmath>
+
+#define _LOG_OUTPUT_
 
 extern bool vision_on;
 // Publisher for final angle (result of processing)
@@ -29,8 +32,14 @@ int morph_kernel_size = 5;
 
 int camera_horiz_fov = 53;
 int camera_width = 640;
-int camera_width = 480;
+int camera_height = 480;
 
+int camera_focal_len;
+
+double get_horiz_angle(const cv::Point2f &point) {
+	double slope = (point.x - camera_width / 2) / camera_focal_len;
+	return std::atan(slope) * 180 / M_PI;
+}
 // The image processing callback
 void image_callback(const sensor_msgs::ImageConstPtr& msg) {
 	if(vision_on) {
@@ -49,7 +58,7 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
         // Find contours
         std::vector<std::vector<cv::Point>> contours;
         // Return as list and simplify to only end points
-        cv::findContours(mono, contours, cv::CV_RETR_LIST, cv::CV_CHAIN_APPROX_SIMPLE);
+        cv::findContours(mono, contours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
 
         // Find bounding rects for each contour
         std::vector<cv::RotatedRect> rects;
@@ -64,7 +73,7 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
             // Find the two biggest contours
             int biggest = -1;
             int second_biggest = -1;
-            for(int i = 0; i < rects.size(); rects++) {
+            for(int i = 0; i < rects.size(); i++) {
                 if(biggest == -1 || rects[i].size.area() > rects[biggest].size.area()) {
                     second_biggest = biggest;
                     biggest = i;
@@ -73,11 +82,34 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
                     second_biggest = i;
                 }
             }
-
+			
+			// Calculate the midpoint
             cv::Point2f mid1 = rects[biggest].center, mid2 = rects[second_biggest].center;
             cv::Point2f mid((mid1.x + mid2.x) / 2, (mid1.y + mid2.y) / 2);
 
+			// Calculate the angle
+			double angle = get_horiz_angle(mid);
+
+			// Publish to the topic
+			std_msgs::Float64 result;
+			result.data = angle;
+			result_pub.publish(result);
+
+			#ifdef _LOG_OUTPUT_
+			ROS_INFO("Target Angle: %f", angle);
+			#endif
+			
         }
+		else {
+			// Publish a NaN to indicate that nothing was found
+			std_msgs::Float64 result;
+			result.data = NAN;
+			result_pub.publish(result);
+
+			#ifdef _LOG_OUTPUT_
+			ROS_INFO("Target not found.");
+			#endif
+		}
 
 		//cv::imshow("view", mono);
 		//cv::waitKey(30);
@@ -134,6 +166,11 @@ int main(int argc, char **argv) {
     node_handle.param("thresh_low_s", thresh_low_s, thresh_low_s);
     node_handle.param("thresh_low_v", thresh_low_v, thresh_low_v);
     node_handle.param("morph_kernel_size", morph_kernel_size, morph_kernel_size);
+	node_handle.param("camera_width", camera_width, camera_width);
+	node_handle.param("camera_height", camera_height, camera_height);
+	node_handle.param("camera_horiz_fov", camera_horiz_fov, camera_horiz_fov);
+
+	camera_focal_len = ((double) camera_width) / 2 / std::tan(((double) camera_horiz_fov) / 2 * M_PI / 180);
 
 	// Set up image transport stuff
 	image_transport::ImageTransport im_transport(node_handle);
