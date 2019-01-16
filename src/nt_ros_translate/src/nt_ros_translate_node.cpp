@@ -1,4 +1,5 @@
 #include <ros/ros.h>
+#include <std_msgs/Float64.h>
 #include <ntcore.h>
 #include <networktables/NetworkTable.h>
 
@@ -6,6 +7,10 @@
 
 std::string nt_ip_addr;
 ros::Subscriber result_sub;
+
+void result_callback(const std_msgs::Float64::ConstPtr &msg) {
+	// TODO
+}
 
 int main(int argc, char **argv) {
 	
@@ -20,6 +25,9 @@ int main(int argc, char **argv) {
 	NetworkTable::SetClientMode();
 	NetworkTable::SetIPAddress(nt_ip_addr.c_str());
 	NetworkTable::Initialize();
+
+	// Topic subscription
+	result_sub = node_handle.subscribe("bot_vision/result_horiz_angle", 1, result_callback);
 
 	return 0;
 }
