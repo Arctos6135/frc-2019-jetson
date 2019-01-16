@@ -28,6 +28,9 @@ int thresh_low_h = 80;
 int thresh_low_s = 80;
 int thresh_low_v = 70;
 
+float fullness_low = 0.75;
+float fullness_high = 1.0;
+
 int morph_kernel_size = 5;
 
 int camera_horiz_fov = 53;
@@ -35,6 +38,20 @@ int camera_width = 640;
 int camera_height = 480;
 
 int camera_focal_len;
+
+// The contour is checked with this function for validity
+bool is_valid_contour(const std::vector<cv::Point> &contour, const cv::RotatedRect &rect) {
+	// Check for fullness
+	float contour_area = cv::contourArea(contour);
+	float contour_fullness = contour_area / rect.size.area();
+
+	if(contour_fullness <= fullness_high && contour_fullness >= fullness_low) {
+		return true;
+	}
+	else {
+		return false;
+	}
+}
 
 double get_horiz_angle(const cv::Point2f &point) {
 	double slope = (point.x - camera_width / 2) / camera_focal_len;
@@ -63,8 +80,12 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
         // Find bounding rects for each contour
         std::vector<cv::RotatedRect> rects;
         for(auto contour : contours) {
-            // Add checks here if necessary
-            rects.push_back(cv::minAreaRect(contour));
+            // Check if contour is valid
+			cv::RotatedRect bound = cv::minAreaRect(contour);
+			
+			if(is_valid_contour(contour, bound)) {
+            	rects.push_back(bound);
+			}
         }
 
         double x_angle = NAN;
@@ -165,6 +186,8 @@ int main(int argc, char **argv) {
     node_handle.param("thresh_low_h", thresh_low_h, thresh_low_h);
     node_handle.param("thresh_low_s", thresh_low_s, thresh_low_s);
     node_handle.param("thresh_low_v", thresh_low_v, thresh_low_v);
+	node_handle.param("fullness_high", fullness_high, fullness_high);
+	node_handle.param("fullness_low", fullness_low, fullness_low);
     node_handle.param("morph_kernel_size", morph_kernel_size, morph_kernel_size);
 	node_handle.param("camera_width", camera_width, camera_width);
 	node_handle.param("camera_height", camera_height, camera_height);
