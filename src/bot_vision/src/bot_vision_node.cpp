@@ -195,6 +195,11 @@ int main(int argc, char **argv) {
 
 	camera_focal_len = ((double) camera_width) / 2 / std::tan(((double) camera_horiz_fov) / 2 * M_PI / 180);
 
+	// Reset camera back to normal exposure
+	std_msgs::Int32 m;
+	m.data = normal_exposure;
+	exposure_pub.publish(m);
+
 	// Set up image transport stuff
 	image_transport::ImageTransport im_transport(node_handle);
 	// Subscribe to the raw image topic
