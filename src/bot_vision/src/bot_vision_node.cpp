@@ -15,7 +15,10 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
 
+// If defined, the result will be logged to the info stream
 #define _LOG_OUTPUT_
+// If defined, a window will open with semi-processed images to aid with debugging
+//#define _DEBUG_VISION_
 
 extern bool vision_on;
 // Publisher for final angle (result of processing)
@@ -60,9 +63,10 @@ double get_horiz_angle(const cv::Point2f &point) {
 // The image processing callback
 void image_callback(const sensor_msgs::ImageConstPtr& msg) {
 	if(vision_on) {
+		cv::Mat original_image = cv_bridge::toCvShare(msg, "bgr8")->image;
 		cv::Mat hsv, mono;
 		// Convert colour space
-		cv::cvtColor(cv_bridge::toCvShare(msg, "bgr8")->image, hsv, cv::COLOR_BGR2HSV_FULL);
+		cv::cvtColor(original_image, hsv, cv::COLOR_BGR2HSV_FULL);
 		// Threshold
 		cv::inRange(hsv, cv::Scalar(thresh_low_h, thresh_low_s, thresh_low_v),
 				cv::Scalar(thresh_high_h, thresh_high_s, thresh_high_v), mono);
@@ -75,7 +79,7 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
         // Find contours
         std::vector<std::vector<cv::Point>> contours;
         // Return as list and simplify to only end points
-        cv::findContours(mono, contours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
+        cv::findContours(mono, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
 
         // Find bounding rects for each contour
         std::vector<cv::RotatedRect> rects;
@@ -131,9 +135,16 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
 			ROS_INFO("Target not found.");
 			#endif
 		}
-
-		//cv::imshow("view", mono);
-		//cv::waitKey(30);
+		
+		#ifdef _DEBUG_VISION_
+		cv::Mat copied;
+		original_image.copyTo(copied);
+		
+		cv::drawContours(copied, contours, -1, cv::Scalar(0, 255, 255), 4);
+		cv::imshow("Debug", copied);
+		
+		cv::waitKey(20);
+		#endif
 	}
 }
 

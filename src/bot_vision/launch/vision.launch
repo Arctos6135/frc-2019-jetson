@@ -11,7 +11,7 @@
 		<param name="thresh_high_v" value="255" />
 		<param name="thresh_low_h" value="80" />
 		<param name="thresh_low_s" value="80" />
-		<param name="thresh_low_v" value="70" />
+		<param name="thresh_low_v" value="128" />
 		
 		<!-- Opening and closing kernel size -->
 		<param name="morph_kernel_size" value="5" />
