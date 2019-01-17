@@ -1,0 +1,6 @@
+<launch>
+	<node pkg="nt_ros_translate" type="nt_ros_translate_node" name="nt_ros_translate_node">
+		<param name="nt_ip_addr" value="10.61.35.2" />
+	</node>
+</launch>
+

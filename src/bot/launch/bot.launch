@@ -1,0 +1,9 @@
+<launch>
+	<include file="$(find bot)/launch/cameras.launch">
+	</include>
+	<include file="$(find bot_vision)/launch/vision.launch">
+	</include>
+	<include file="$(find nt_ros_translate)/launch/nt_ros_translate.launch">
+	</include>
+</launch>
+
