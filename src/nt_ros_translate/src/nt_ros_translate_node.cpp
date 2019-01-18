@@ -66,6 +66,9 @@ int main(int argc, char **argv) {
 	// Service client setup
 	vision_scli = node_handle.serviceClient<std_srvs::SetBool>("/vision_processing_node/enable_vision");
 
+	// Notify the rio that the Jetson vision is online
+	table->PutBoolean("vision-online", true);
+
 	ros::Rate rate(25);
 
 	while(ros::ok()) {
@@ -74,6 +77,9 @@ int main(int argc, char **argv) {
 		rate.sleep();
 	}
 	
+	// Notify the rio that vision has been shut down
+	table->PutBoolean("vision-online", false);
+
 	return 0;
 }
 
