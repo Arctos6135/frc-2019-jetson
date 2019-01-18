@@ -60,6 +60,10 @@ int main(int argc, char **argv) {
 
 	table = NetworkTable::GetTable("roborio-jetson");
 
+	// Add table listener
+	VisionTableListener listener;
+	table->AddTableListener(&listener);
+
 	// Topic subscription
 	result_sub = node_handle.subscribe("/bot_vision/result_horiz_angle", 1, result_callback);
 

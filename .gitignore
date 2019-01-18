@@ -15,5 +15,5 @@ src/*
 !src/nt_ros_translate
 *compile_commands.json
 
-*.swp
+*.sw*
 .vscode
