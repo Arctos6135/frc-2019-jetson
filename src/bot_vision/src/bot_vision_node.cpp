@@ -12,6 +12,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 
 #include <vector>
+#include <utility>
 #define _USE_MATH_DEFINES
 #include <cmath>
 
@@ -36,11 +37,17 @@ float fullness_high = 1.0;
 
 int morph_kernel_size = 5;
 
+int max_y_diff = 50;
+
 int camera_horiz_fov = 53;
 int camera_width = 640;
 int camera_height = 480;
 
 int camera_focal_len;
+
+inline float combined_area(std::pair<cv::RotatedRect, cv::RotatedRect> contours) {
+    return contours.first.size.area() + contours.second.size.area();
+}
 
 // The contour is checked with this function for validity
 bool is_valid_contour(const std::vector<cv::Point> &contour, const cv::RotatedRect &rect) {
@@ -92,24 +99,37 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
 			}
         }
 
+        // Make a vector of pairs of rects
+        // This will sore all the pairs of rects that are about the same height.
+        std::vector<std::pair<cv::RotatedRect, cv::RotatedRect>> matching;
+        // Go through all unique combinations
+        for(int i = 0; i < rects.size(); i ++) {
+            for(int j = i; j < rects.size(); j ++) {
+                // Verify that the y diff is acceptable
+                if(std::abs(rects[i].center.y - rects[j].center.y) <= max_y_diff) {
+                    matching.push_back(std::make_pair(rects[i], rects[j]));
+                }
+            }
+        }
+
         double x_angle = NAN;
-        
-        if(rects.size() >= 2) {
-            // Find the two biggest contours
+        // Verify that there are one or more pairs of contours that match
+        if(matching.size()) {
+            // Find the two biggest pairs
             int biggest = -1;
             int second_biggest = -1;
-            for(int i = 0; i < rects.size(); i++) {
-                if(biggest == -1 || rects[i].size.area() > rects[biggest].size.area()) {
+            for(int i = 0; i < matching.size(); i++) {
+                if(biggest == -1 || combined_area(rects[i]) > combined_area(rects[biggest])) {
                     second_biggest = biggest;
                     biggest = i;
                 }
-                else if(second_biggest == -1 || rects[i].size.area() > rects[second_biggest].size.area()) {
+                else if(second_biggest == -1 || combined_area(rects[i]) > combined_area(rects[second_biggest])) {
                     second_biggest = i;
                 }
             }
 			
 			// Calculate the midpoint
-            cv::Point2f mid1 = rects[biggest].center, mid2 = rects[second_biggest].center;
+            cv::Point2f mid1 = matching[biggest].first.center, mid2 = matching[biggest].second.center;
             cv::Point2f mid((mid1.x + mid2.x) / 2, (mid1.y + mid2.y) / 2);
 
 			// Calculate the angle
@@ -200,6 +220,7 @@ int main(int argc, char **argv) {
 	node_handle.param("fullness_high", fullness_high, fullness_high);
 	node_handle.param("fullness_low", fullness_low, fullness_low);
     node_handle.param("morph_kernel_size", morph_kernel_size, morph_kernel_size);
+    node_handle.param("max_y_diff", max_y_diff, max_y_diff);
 	node_handle.param("camera_width", camera_width, camera_width);
 	node_handle.param("camera_height", camera_height, camera_height);
 	node_handle.param("camera_horiz_fov", camera_horiz_fov, camera_horiz_fov);
