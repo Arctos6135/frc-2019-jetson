@@ -20,7 +20,7 @@
 		<param name="fullness_low" value="0.75" />
 
 		<!-- Camera properties -->
-		<param name="camera_horiz_fov" value="53" />
+		<param name="camera_horiz_fov" value="61" />
 		<param name="camera_width" value="640" />
 		<param name="camera_height" value="480" />
 	</node>

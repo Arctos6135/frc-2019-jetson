@@ -39,7 +39,7 @@ int morph_kernel_size = 5;
 
 int max_y_diff = 50;
 
-int camera_horiz_fov = 53;
+int camera_horiz_fov = 61;
 int camera_width = 640;
 int camera_height = 480;
 
