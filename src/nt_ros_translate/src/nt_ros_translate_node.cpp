@@ -9,6 +9,8 @@
 #include <string>
 #include <memory>
 
+#include <cstdlib>
+
 // NetworkTables IP address
 std::string nt_ip_addr;
 // Subscriber for receiving vision result
@@ -26,6 +28,8 @@ void result_callback(const std_msgs::Float64::ConstPtr &msg) {
 // Table listener
 class VisionTableListener : public ITableListener {
 	void ValueChanged(ITable *source, llvm::StringRef key, std::shared_ptr<nt::Value> value, bool is_new) override {
+        // Check for vision enable entry
+        // Make sure entry type is correct
 		if(key.compare("vision-enable") == 0 && value->IsBoolean()) {
 			std_srvs::SetBool args;
 			args.request.data = value->GetBoolean();
@@ -39,6 +43,10 @@ class VisionTableListener : public ITableListener {
 				ROS_FATAL_STREAM("Oh no! It's busted");
 			}
 		}
+        // Jetson graceful shutdown
+        else if(key.compare("shutdown") == 0 && value->IsBoolean() && value->GetBoolean()) {
+            std::system("shutdown -P now");
+        }
 	}
 };
 

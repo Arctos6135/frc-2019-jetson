@@ -39,13 +39,13 @@ int morph_kernel_size = 5;
 
 int max_y_diff = 50;
 
-int camera_horiz_fov = 53;
+int camera_horiz_fov = 61;
 int camera_width = 640;
 int camera_height = 480;
 
 int camera_focal_len;
 
-inline float combined_area(std::pair<cv::RotatedRect, cv::RotatedRect> contours) {
+inline float combined_area(const std::pair<cv::RotatedRect, cv::RotatedRect> &contours) {
     return contours.first.size.area() + contours.second.size.area();
 }
 
@@ -119,11 +119,11 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
             int biggest = -1;
             int second_biggest = -1;
             for(int i = 0; i < matching.size(); i++) {
-                if(biggest == -1 || combined_area(rects[i]) > combined_area(rects[biggest])) {
+                if(biggest == -1 || combined_area(matching[i]) > combined_area(matching[biggest])) {
                     second_biggest = biggest;
                     biggest = i;
                 }
-                else if(second_biggest == -1 || combined_area(rects[i]) > combined_area(rects[second_biggest])) {
+                else if(second_biggest == -1 || combined_area(matching[i]) > combined_area(matching[second_biggest])) {
                     second_biggest = i;
                 }
             }
