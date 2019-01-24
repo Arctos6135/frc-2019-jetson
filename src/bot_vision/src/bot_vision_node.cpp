@@ -40,10 +40,10 @@ int morph_kernel_size = 5;
 int max_y_diff = 50;
 
 int camera_horiz_fov = 61;
-int camera_width = 640;
-int camera_height = 480;
+int camera_width = 1280;
+int camera_height = 720;
 
-int camera_focal_len;
+int camera_horiz_f;
 
 inline float combined_area(const std::pair<cv::RotatedRect, cv::RotatedRect> &contours) {
     return contours.first.size.area() + contours.second.size.area();
@@ -64,7 +64,7 @@ bool is_valid_contour(const std::vector<cv::Point> &contour, const cv::RotatedRe
 }
 
 double get_horiz_angle(const cv::Point2f &point) {
-	double slope = (point.x - camera_width / 2) / camera_focal_len;
+	double slope = (point.x - camera_width / 2) / camera_horiz_f;
 	return std::atan(slope) * 180 / M_PI;
 }
 // The image processing callback
@@ -143,7 +143,6 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
 			#ifdef _LOG_OUTPUT_
 			ROS_INFO("Target Angle: %f", angle);
 			#endif
-			
         }
 		else {
 			// Publish a NaN to indicate that nothing was found
@@ -225,7 +224,7 @@ int main(int argc, char **argv) {
 	node_handle.param("camera_height", camera_height, camera_height);
 	node_handle.param("camera_horiz_fov", camera_horiz_fov, camera_horiz_fov);
 
-	camera_focal_len = ((double) camera_width) / 2 / std::tan(((double) camera_horiz_fov) / 2 * M_PI / 180);
+	camera_horiz_f = ((double) camera_width) / 2 / std::tan(((double) camera_horiz_fov) / 2 * M_PI / 180);
 
 	// Reset camera back to normal exposure
 	std_msgs::Int32 m;
