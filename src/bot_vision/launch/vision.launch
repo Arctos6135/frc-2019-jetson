@@ -21,6 +21,7 @@
 
 		<!-- Camera properties -->
 		<param name="camera_horiz_fov" value="61" />
+        <param name="camera_vert_fov" value="37" />
 		<param name="camera_width" value="1280" />
 		<param name="camera_height" value="720" />
 	</node>

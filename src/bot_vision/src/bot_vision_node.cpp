@@ -40,10 +40,15 @@ int morph_kernel_size = 5;
 int max_y_diff = 50;
 
 int camera_horiz_fov = 61;
+int camera_vert_fov = 37;
 int camera_width = 1280;
 int camera_height = 720;
 
 int camera_horiz_f;
+int camera_vert_f;
+
+// Bounding box
+double tape_width = 5.324812;
 
 inline float combined_area(const std::pair<cv::RotatedRect, cv::RotatedRect> &contours) {
     return contours.first.size.area() + contours.second.size.area();
@@ -66,6 +71,16 @@ bool is_valid_contour(const std::vector<cv::Point> &contour, const cv::RotatedRe
 double get_horiz_angle(const cv::Point2f &point) {
 	double slope = (point.x - camera_width / 2) / camera_horiz_f;
 	return std::atan(slope) * 180 / M_PI;
+}
+double get_vert_angle(const cv::Point2f &point) {
+    double slope = (point.y - camera_width / 2) / camera_vert_f;
+    return std::atan(slope) * 180 / M_PI;
+}
+
+double get_distance_v(const cv::Point2f &pt_high, const cv::Point2f &pt_low) {
+    double theta = get_vert_angle(pt_low);
+    double phi = get_vert_angle(pt_high);
+    return tape_width / (std::tan(phi) - std::tan(theta));
 }
 // The image processing callback
 void image_callback(const sensor_msgs::ImageConstPtr& msg) {
@@ -223,8 +238,10 @@ int main(int argc, char **argv) {
 	node_handle.param("camera_width", camera_width, camera_width);
 	node_handle.param("camera_height", camera_height, camera_height);
 	node_handle.param("camera_horiz_fov", camera_horiz_fov, camera_horiz_fov);
+    node_handle.param("camera_vert_fov", camera_vert_fov, camera_vert_fov);
 
 	camera_horiz_f = ((double) camera_width) / 2 / std::tan(((double) camera_horiz_fov) / 2 * M_PI / 180);
+    camera_vert_f = ((double) camera_height) / 2 / std::tan(((double) camera_vert_fov) / 2 * M_PI / 180);
 
 	// Reset camera back to normal exposure
 	std_msgs::Int32 m;
