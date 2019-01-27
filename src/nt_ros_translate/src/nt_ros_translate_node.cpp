@@ -15,6 +15,9 @@
 std::string nt_ip_addr;
 // Subscriber for receiving vision result
 ros::Subscriber result_sub;
+ros::Subscriber angle_offset_sub;
+ros::Subscriber x_offset_sub;
+ros::Subscriber y_offset_sub;
 // Service client for turning vision on or off
 ros::ServiceClient vision_scli;
 // The shared table for roboRIO/Jetson comms
@@ -23,6 +26,15 @@ std::shared_ptr<NetworkTable> table;
 void result_callback(const std_msgs::Float64::ConstPtr &msg) {
 	// Put the result into the table
 	table->PutNumber("horizontal-angle", msg->data);
+}
+void angle_offset_callback(const std_msgs::Float64::ConstPtr &msg) {
+    table->PutNumber("angle-offset", msg->data);
+}
+void x_offset_callback(const std_msgs::Float64::ConstPtr &msg) {
+    table->PutNumber("x-offset", msg->data);
+}
+void y_offset_callback(const std_msgs::Float64::ConstPtr &msg) {
+    table->PutNumber("y-offset", msg->data);
 }
 
 // Table listener
@@ -74,6 +86,9 @@ int main(int argc, char **argv) {
 
 	// Topic subscription
 	result_sub = node_handle.subscribe("/bot_vision/result_horiz_angle", 1, result_callback);
+    angle_offset_sub = node_handle.subscribe("/bot_vision/result_angle_offset", 1, angle_offset_callback);
+    x_offset_sub = node_handle.subscribe("/bot_vision/result_x_offset", 1, x_offset_callback);
+    y_offset_sub = node_handle.subscribe("/bot_vision/result_y_offset", 1, y_offset_callback);
 
 	// Service client setup
 	vision_scli = node_handle.serviceClient<std_srvs::SetBool>("/vision_processing_node/enable_vision");
