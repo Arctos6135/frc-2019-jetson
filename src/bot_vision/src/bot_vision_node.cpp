@@ -13,6 +13,7 @@
 
 #include <vector>
 #include <utility>
+#include <algorithm>
 #define _USE_MATH_DEFINES
 #include <cmath>
 
@@ -21,9 +22,14 @@
 // If defined, a window will open with semi-processed images to aid with debugging
 //#define _DEBUG_VISION_
 
+#define DEG(x) ((x) * 180 / M_PI)
+
 extern bool vision_on;
 // Publisher for final angle (result of processing)
 ros::Publisher result_pub;
+ros::Publisher angle_offset_pub;
+ros::Publisher x_offset_pub;
+ros::Publisher y_offset_pub;
 // Vision processing parameters
 int thresh_high_h = 130;
 int thresh_high_s = 255;
@@ -48,7 +54,8 @@ int camera_horiz_f;
 int camera_vert_f;
 
 // Bounding box
-double tape_width = 5.324812;
+double tape_width = 5.825572030188476;
+double tape_gap = 8;
 
 inline float combined_area(const std::pair<cv::RotatedRect, cv::RotatedRect> &contours) {
     return contours.first.size.area() + contours.second.size.area();
@@ -70,11 +77,11 @@ bool is_valid_contour(const std::vector<cv::Point> &contour, const cv::RotatedRe
 
 double get_horiz_angle(const cv::Point2f &point) {
 	double slope = (point.x - camera_width / 2) / camera_horiz_f;
-	return std::atan(slope) * 180 / M_PI;
+	return std::atan(slope);
 }
 double get_vert_angle(const cv::Point2f &point) {
     double slope = (point.y - camera_width / 2) / camera_vert_f;
-    return std::atan(slope) * 180 / M_PI;
+    return std::atan(slope);
 }
 
 double get_distance_v(const cv::Point2f &pt_high, const cv::Point2f &pt_low) {
@@ -150,13 +157,73 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
 			// Calculate the angle
 			double angle = get_horiz_angle(mid);
 
+            // Calculate the distances from y coordinates of each piece of tape
+            cv::Point2f points[4];
+            matching[biggest].points(points);
+            double min_y = std::min(points[0], std::min(points[1], std::min(points[2], points[3])));
+            double max_y = std::max(points[0], std::max(points[1], std::max(points[2], points[3])));
+            double dist1 = get_distance_v(max_y, min_y);
+
+            matching[second_biggest].points(points);
+            min_y = std::min(points[0], std::min(points[1], std::min(points[2], points[3])));
+            max_y = std::max(points[0], std::max(points[1], std::max(points[2], points[3])));
+            double dist2 = get_distance_v(max_y, min_y);
+            // Calculate the angle difference
+            double x_angle1 = get_horiz_angle(matching[biggest]);
+            double x_angle2 = get_horiz_angle(matching[second_biggest]);
+            double diff = std::max(x_angle1, x_angle2) - std::min(x_angle1, x_angle2);
+            // Use the cosine law to find an estimate for the space between the two tapes
+            double estimated_spacing = std::sqrt(dist1 * dist1 + dist2 * dist2 - 2 * dist1 * dist2 * std::cos(diff));
+            // Divide the actual by the estimate to get an error multiplier
+            double error = tape_gap / estimated_spacing;
+            // Multiply both distances by the error to improve our estimate
+            dist1 *= error;
+            dist2 *= error;
+            // Find out the relation of dist1 and dist2, as well as which angle is the one on the left
+            double left_side, right_side;
+            double left_angle, right_angle;
+            if(x_angle1 < x_angle2) {
+                left_side = dist1;
+                right_side = dist2;
+                left_angle = x_angle1;
+                right_angle = x_angle2;
+            }
+            else {
+                left_side = dist2;
+                right_side = dist1;
+                left_angle = x_angle1;
+                right_angle = x_angle2;
+            }
+            // Calculate the angle offset of the line perpendicular to the target's plane to the centre of the camera
+            double theta = std::acos((left_side * left_side + tape_gap * tape_gap - right_side * right_side) / (2 * left_side * tape_gap));
+            double angle_offset = (M_PI / 2 - theta) + left_angle;
+            // Calculate the coordinates of the centre of the target
+            double x1 = std::cos(-left_angle + M_PI / 2) * left_side;
+            double y1 = std::sin(-left_angle + M_PI / 2) * left_side;
+            double x2 = std::cos(-right_angle + M_PI / 2) * right_side;
+            double y2 = std::sin(-right_angle + M_PI / 2) * right_side;
+            double target_x = (x1 + x2) / 2;
+            double target_y = (y1 + y2) / 2;
+            
+
 			// Publish to the topic
+            angle = DEG(angle);
 			std_msgs::Float64 result;
 			result.data = angle;
 			result_pub.publish(result);
 
+            result.data = angle_offset;
+            angle_offset_pub.publish(result);
+
+            result.data = target_x;
+            x_offset_pub.publish(result);
+
+            result.data = target_y;
+            y_offset_pub.publish(result);
+
 			#ifdef _LOG_OUTPUT_
-			ROS_INFO("Target Angle: %f", angle);
+			ROS_INFO("Target Angle: %f\nAngle Offset: %f\nX: %f, Y:%f", angle, angle_offset, target_x, target_y);
+
 			#endif
         }
 		else {
@@ -164,6 +231,9 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
 			std_msgs::Float64 result;
 			result.data = NAN;
 			result_pub.publish(result);
+            angle_offset_pub.publish(result);
+            x_offset_pub.publish(result);
+            y_offset_pub.publish(result);
 
 			#ifdef _LOG_OUTPUT_
 			ROS_INFO("Target not found.");
@@ -220,8 +290,11 @@ int main(int argc, char **argv) {
 	ros::NodeHandle node_handle("~");
 
 	// Init publishers
-	result_pub = node_handle.advertise<std_msgs::Float64>("result_horiz_angle", 5);
-	exposure_pub = node_handle.advertise<std_msgs::Int32>("/main_camera/exposure", 5);
+	result_pub = node_handle.advertise<std_msgs::Float64>("result_horiz_angle", 2);
+    angle_offset_pub = node_handle.advertise<std_msgs::Float64>("result_angle_offset", 2);
+    x_offset_pub = node_handle.advertise<std_msgs::Float64>("result_x_offset", 2);
+    y_offset_pub = node_handle.advertise<std_msgs::Float64>("result_y_offset", 2);
+	exposure_pub = node_handle.advertise<std_msgs::Int32>("/main_camera/exposure", 2);
 	// Get the parameter values
 	node_handle.param("vision_exposure", vision_exposure, 5);
 	node_handle.param("normal_exposure", normal_exposure, 0);
