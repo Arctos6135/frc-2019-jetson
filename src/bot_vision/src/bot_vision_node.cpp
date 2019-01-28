@@ -212,7 +212,7 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
 			result.data = angle;
 			result_pub.publish(result);
 
-            result.data = angle_offset;
+            result.data = DEG(angle_offset);
             angle_offset_pub.publish(result);
 
             result.data = target_x;
