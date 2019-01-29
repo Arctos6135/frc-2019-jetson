@@ -183,6 +183,8 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
             // Multiply both distances by the error to improve our estimate
             dist1 *= error;
             dist2 *= error;
+
+
             // Find out the relation of dist1 and dist2, as well as which angle is the one on the left
             double left_side, right_side;
             double left_angle, right_angle;
@@ -198,6 +200,13 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
                 left_angle = x_angle1;
                 right_angle = x_angle2;
             }
+
+
+			#ifdef _LOG_OUTPUT_
+			ROS_INFO("Left: %f, Right: %f", left_side, right_side);
+			ROS_INFO("Left Angle: %f, Right Angle:%f", left_angle, right_angle);
+			#endif
+
             // Calculate the angle offset of the line perpendicular to the target's plane to the centre of the camera
             double theta = std::acos((left_side * left_side + tape_gap * tape_gap - right_side * right_side) / (2 * left_side * tape_gap));
             double angle_offset = (M_PI / 2 - theta) + left_angle;
