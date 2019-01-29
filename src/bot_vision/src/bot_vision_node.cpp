@@ -132,7 +132,7 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
         std::vector<std::pair<cv::RotatedRect, cv::RotatedRect>> matching;
         // Go through all unique combinations
         for(int i = 0; i < rects.size(); i ++) {
-            for(int j = i; j < rects.size(); j ++) {
+            for(int j = i + 1; j < rects.size(); j ++) {
                 // Verify that the y diff is acceptable
                 if(std::abs(rects[i].center.y - rects[j].center.y) <= max_y_diff) {
                     matching.push_back(std::make_pair(rects[i], rects[j]));
@@ -170,6 +170,8 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
             min_y = std::min(points[0].y, std::min(points[1].y, std::min(points[2].y, points[3].y)));
             max_y = std::max(points[0].y, std::max(points[1].y, std::max(points[2].y, points[3].y)));
             double dist2 = get_distance_v(max_y, min_y);
+
+
             // Calculate the angle difference
             double x_angle1 = get_horiz_angle(tapes.first.center);
             double x_angle2 = get_horiz_angle(tapes.second.center);
