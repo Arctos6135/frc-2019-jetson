@@ -13,6 +13,7 @@
 
 #include <vector>
 #include <utility>
+#include <algorithm>
 #define _USE_MATH_DEFINES
 #include <cmath>
 
@@ -21,9 +22,14 @@
 // If defined, a window will open with semi-processed images to aid with debugging
 //#define _DEBUG_VISION_
 
+#define DEG(x) ((x) * 180 / M_PI)
+
 extern bool vision_on;
 // Publisher for final angle (result of processing)
 ros::Publisher result_pub;
+ros::Publisher angle_offset_pub;
+ros::Publisher x_offset_pub;
+ros::Publisher y_offset_pub;
 // Vision processing parameters
 int thresh_high_h = 130;
 int thresh_high_s = 255;
@@ -40,10 +46,16 @@ int morph_kernel_size = 5;
 int max_y_diff = 50;
 
 int camera_horiz_fov = 61;
+int camera_vert_fov = 37;
 int camera_width = 1280;
 int camera_height = 720;
 
-int camera_focal_len;
+int camera_horiz_f;
+int camera_vert_f;
+
+// Bounding box
+double tape_width = 5.825572030188476;
+double tape_gap = 11.0629666927;
 
 inline float combined_area(const std::pair<cv::RotatedRect, cv::RotatedRect> &contours) {
     return contours.first.size.area() + contours.second.size.area();
@@ -63,9 +75,25 @@ bool is_valid_contour(const std::vector<cv::Point> &contour, const cv::RotatedRe
 	}
 }
 
+double get_horiz_angle(const double x) {
+    double slope = (x - camera_width / 2) / camera_horiz_f;
+    return std::atan(slope);
+}
 double get_horiz_angle(const cv::Point2f &point) {
-	double slope = (point.x - camera_width / 2) / camera_focal_len;
-	return std::atan(slope) * 180 / M_PI;
+	return get_horiz_angle(point.x);
+}
+double get_vert_angle(const double y) {
+    double slope = (y - camera_width / 2) / camera_vert_f;
+    return std::atan(slope);
+}
+double get_vert_angle(const cv::Point2f &point) {
+    return get_vert_angle(point.y);
+}
+
+double get_distance_v(const double high, const double low) {
+    double theta = get_vert_angle(low);
+    double phi = get_vert_angle(high);
+    return tape_width / (std::tan(phi) - std::tan(theta));
 }
 // The image processing callback
 void image_callback(const sensor_msgs::ImageConstPtr& msg) {
@@ -104,7 +132,7 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
         std::vector<std::pair<cv::RotatedRect, cv::RotatedRect>> matching;
         // Go through all unique combinations
         for(int i = 0; i < rects.size(); i ++) {
-            for(int j = i; j < rects.size(); j ++) {
+            for(int j = i + 1; j < rects.size(); j ++) {
                 // Verify that the y diff is acceptable
                 if(std::abs(rects[i].center.y - rects[j].center.y) <= max_y_diff) {
                     matching.push_back(std::make_pair(rects[i], rects[j]));
@@ -115,41 +143,111 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
         double x_angle = NAN;
         // Verify that there are one or more pairs of contours that match
         if(matching.size()) {
-            // Find the two biggest pairs
+            // Find the biggest pair
             int biggest = -1;
-            int second_biggest = -1;
             for(int i = 0; i < matching.size(); i++) {
                 if(biggest == -1 || combined_area(matching[i]) > combined_area(matching[biggest])) {
-                    second_biggest = biggest;
                     biggest = i;
-                }
-                else if(second_biggest == -1 || combined_area(matching[i]) > combined_area(matching[second_biggest])) {
-                    second_biggest = i;
                 }
             }
 			
 			// Calculate the midpoint
-            cv::Point2f mid1 = matching[biggest].first.center, mid2 = matching[biggest].second.center;
+            auto &tapes = matching[biggest];
+            cv::Point2f mid1 = tapes.first.center, mid2 = tapes.second.center;
             cv::Point2f mid((mid1.x + mid2.x) / 2, (mid1.y + mid2.y) / 2);
 
 			// Calculate the angle
 			double angle = get_horiz_angle(mid);
 
+            // Calculate the distances from y coordinates of each piece of tape
+            cv::Point2f points[4];
+            tapes.first.points(points);
+            double min_y = std::min(points[0].y, std::min(points[1].y, std::min(points[2].y, points[3].y)));
+            double max_y = std::max(points[0].y, std::max(points[1].y, std::max(points[2].y, points[3].y)));
+            double dist1 = get_distance_v(max_y, min_y);
+
+            tapes.second.points(points);
+            min_y = std::min(points[0].y, std::min(points[1].y, std::min(points[2].y, points[3].y)));
+            max_y = std::max(points[0].y, std::max(points[1].y, std::max(points[2].y, points[3].y)));
+            double dist2 = get_distance_v(max_y, min_y);
+
+
+            // Calculate the angle difference
+            double x_angle1 = get_horiz_angle(tapes.first.center);
+            double x_angle2 = get_horiz_angle(tapes.second.center);
+            double diff = std::max(x_angle1, x_angle2) - std::min(x_angle1, x_angle2);
+            // Use the cosine law to find an estimate for the space between the two tapes
+            double estimated_spacing = std::sqrt(dist1 * dist1 + dist2 * dist2 - 2 * dist1 * dist2 * std::cos(diff));
+            // Divide the actual by the estimate to get an error multiplier
+            double error = tape_gap / estimated_spacing;
+            // Multiply both distances by the error to improve our estimate
+            dist1 *= error;
+            dist2 *= error;
+
+
+            // Find out the relation of dist1 and dist2, as well as which angle is the one on the left
+            double left_side, right_side;
+            double left_angle, right_angle;
+            if(x_angle1 < x_angle2) {
+                left_side = dist1;
+                right_side = dist2;
+                left_angle = x_angle1;
+                right_angle = x_angle2;
+            }
+            else {
+                left_side = dist2;
+                right_side = dist1;
+                left_angle = x_angle2;
+                right_angle = x_angle1;
+            }
+
+
+			#ifdef _LOG_OUTPUT_
+			ROS_INFO("Left: %f, Right: %f", left_side, right_side);
+			ROS_INFO("Left Angle: %f, Right Angle:%f", left_angle, right_angle);
+			#endif
+
+            // Calculate the angle offset of the line perpendicular to the target's plane to the centre of the camera
+            double theta = std::acos((left_side * left_side + tape_gap * tape_gap - right_side * right_side) / (2 * left_side * tape_gap));
+            double angle_offset = (M_PI / 2 - theta) + left_angle;
+            // Calculate the coordinates of the centre of the target
+            double x1 = std::cos(-left_angle + M_PI / 2) * left_side;
+            double y1 = std::sin(-left_angle + M_PI / 2) * left_side;
+            double x2 = std::cos(-right_angle + M_PI / 2) * right_side;
+            double y2 = std::sin(-right_angle + M_PI / 2) * right_side;
+            double target_x = (x1 + x2) / 2;
+            double target_y = (y1 + y2) / 2;
+            
+
 			// Publish to the topic
+            angle = DEG(angle);
 			std_msgs::Float64 result;
 			result.data = angle;
 			result_pub.publish(result);
 
+			angle_offset = DEG(angle_offset);
+            result.data = angle_offset;
+            angle_offset_pub.publish(result);
+
+            result.data = target_x;
+            x_offset_pub.publish(result);
+
+            result.data = target_y;
+            y_offset_pub.publish(result);
+
 			#ifdef _LOG_OUTPUT_
-			ROS_INFO("Target Angle: %f", angle);
+			ROS_INFO("Target Angle: %f\nAngle Offset: %f\nX: %f, Y:%f", angle, angle_offset, target_x, target_y);
+
 			#endif
-			
         }
 		else {
 			// Publish a NaN to indicate that nothing was found
 			std_msgs::Float64 result;
 			result.data = NAN;
 			result_pub.publish(result);
+            angle_offset_pub.publish(result);
+            x_offset_pub.publish(result);
+            y_offset_pub.publish(result);
 
 			#ifdef _LOG_OUTPUT_
 			ROS_INFO("Target not found.");
@@ -206,8 +304,11 @@ int main(int argc, char **argv) {
 	ros::NodeHandle node_handle("~");
 
 	// Init publishers
-	result_pub = node_handle.advertise<std_msgs::Float64>("result_horiz_angle", 5);
-	exposure_pub = node_handle.advertise<std_msgs::Int32>("/main_camera/exposure", 5);
+	result_pub = node_handle.advertise<std_msgs::Float64>("result_horiz_angle", 2);
+    angle_offset_pub = node_handle.advertise<std_msgs::Float64>("result_angle_offset", 2);
+    x_offset_pub = node_handle.advertise<std_msgs::Float64>("result_x_offset", 2);
+    y_offset_pub = node_handle.advertise<std_msgs::Float64>("result_y_offset", 2);
+	exposure_pub = node_handle.advertise<std_msgs::Int32>("/main_camera/exposure", 2);
 	// Get the parameter values
 	node_handle.param("vision_exposure", vision_exposure, 5);
 	node_handle.param("normal_exposure", normal_exposure, 0);
@@ -224,8 +325,10 @@ int main(int argc, char **argv) {
 	node_handle.param("camera_width", camera_width, camera_width);
 	node_handle.param("camera_height", camera_height, camera_height);
 	node_handle.param("camera_horiz_fov", camera_horiz_fov, camera_horiz_fov);
+    node_handle.param("camera_vert_fov", camera_vert_fov, camera_vert_fov);
 
-	camera_focal_len = ((double) camera_width) / 2 / std::tan(((double) camera_horiz_fov) / 2 * M_PI / 180);
+	camera_horiz_f = ((double) camera_width) / 2 / std::tan(((double) camera_horiz_fov) / 2 * M_PI / 180);
+    camera_vert_f = ((double) camera_height) / 2 / std::tan(((double) camera_vert_fov) / 2 * M_PI / 180);
 
 	// Reset camera back to normal exposure
 	std_msgs::Int32 m;
