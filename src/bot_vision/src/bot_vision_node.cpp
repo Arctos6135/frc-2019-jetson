@@ -55,7 +55,7 @@ int camera_vert_f;
 
 // Bounding box
 double tape_width = 5.825572030188476;
-double tape_gap = 8;
+double tape_gap = 11.0629666927;
 
 inline float combined_area(const std::pair<cv::RotatedRect, cv::RotatedRect> &contours) {
     return contours.first.size.area() + contours.second.size.area();
@@ -75,18 +75,24 @@ bool is_valid_contour(const std::vector<cv::Point> &contour, const cv::RotatedRe
 	}
 }
 
-double get_horiz_angle(const cv::Point2f &point) {
-	double slope = (point.x - camera_width / 2) / camera_horiz_f;
-	return std::atan(slope);
-}
-double get_vert_angle(const cv::Point2f &point) {
-    double slope = (point.y - camera_width / 2) / camera_vert_f;
+double get_horiz_angle(const double x) {
+    double slope = (x - camera_width / 2) / camera_horiz_f;
     return std::atan(slope);
 }
+double get_horiz_angle(const cv::Point2f &point) {
+	return get_horiz_angle(point.x);
+}
+double get_vert_angle(const double y) {
+    double slope = (y - camera_width / 2) / camera_vert_f;
+    return std::atan(slope);
+}
+double get_vert_angle(const cv::Point2f &point) {
+    return get_vert_angle(point.y);
+}
 
-double get_distance_v(const cv::Point2f &pt_high, const cv::Point2f &pt_low) {
-    double theta = get_vert_angle(pt_low);
-    double phi = get_vert_angle(pt_high);
+double get_distance_v(const double high, const double low) {
+    double theta = get_vert_angle(low);
+    double phi = get_vert_angle(high);
     return tape_width / (std::tan(phi) - std::tan(theta));
 }
 // The image processing callback
@@ -137,21 +143,17 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
         double x_angle = NAN;
         // Verify that there are one or more pairs of contours that match
         if(matching.size()) {
-            // Find the two biggest pairs
+            // Find the biggest pair
             int biggest = -1;
-            int second_biggest = -1;
             for(int i = 0; i < matching.size(); i++) {
                 if(biggest == -1 || combined_area(matching[i]) > combined_area(matching[biggest])) {
-                    second_biggest = biggest;
                     biggest = i;
-                }
-                else if(second_biggest == -1 || combined_area(matching[i]) > combined_area(matching[second_biggest])) {
-                    second_biggest = i;
                 }
             }
 			
 			// Calculate the midpoint
-            cv::Point2f mid1 = matching[biggest].first.center, mid2 = matching[biggest].second.center;
+            auto &tapes = matching[biggest];
+            cv::Point2f mid1 = tapes.first.center, mid2 = tapes.second.center;
             cv::Point2f mid((mid1.x + mid2.x) / 2, (mid1.y + mid2.y) / 2);
 
 			// Calculate the angle
@@ -159,18 +161,18 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
 
             // Calculate the distances from y coordinates of each piece of tape
             cv::Point2f points[4];
-            matching[biggest].points(points);
-            double min_y = std::min(points[0], std::min(points[1], std::min(points[2], points[3])));
-            double max_y = std::max(points[0], std::max(points[1], std::max(points[2], points[3])));
+            tapes.first.points(points);
+            double min_y = std::min(points[0].y, std::min(points[1].y, std::min(points[2].y, points[3].y)));
+            double max_y = std::max(points[0].y, std::max(points[1].y, std::max(points[2].y, points[3].y)));
             double dist1 = get_distance_v(max_y, min_y);
 
-            matching[second_biggest].points(points);
-            min_y = std::min(points[0], std::min(points[1], std::min(points[2], points[3])));
-            max_y = std::max(points[0], std::max(points[1], std::max(points[2], points[3])));
+            tapes.second.points(points);
+            min_y = std::min(points[0].y, std::min(points[1].y, std::min(points[2].y, points[3].y)));
+            max_y = std::max(points[0].y, std::max(points[1].y, std::max(points[2].y, points[3].y)));
             double dist2 = get_distance_v(max_y, min_y);
             // Calculate the angle difference
-            double x_angle1 = get_horiz_angle(matching[biggest]);
-            double x_angle2 = get_horiz_angle(matching[second_biggest]);
+            double x_angle1 = get_horiz_angle(tapes.first.center);
+            double x_angle2 = get_horiz_angle(tapes.second.center);
             double diff = std::max(x_angle1, x_angle2) - std::min(x_angle1, x_angle2);
             // Use the cosine law to find an estimate for the space between the two tapes
             double estimated_spacing = std::sqrt(dist1 * dist1 + dist2 * dist2 - 2 * dist1 * dist2 * std::cos(diff));
