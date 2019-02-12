@@ -36,7 +36,7 @@ int thresh_high_s = 255;
 int thresh_high_v = 255;
 int thresh_low_h = 80;
 int thresh_low_s = 80;
-int thresh_low_v = 70;
+int thresh_low_v = 80;
 
 float fullness_low = 0.75;
 float fullness_high = 1.0;
