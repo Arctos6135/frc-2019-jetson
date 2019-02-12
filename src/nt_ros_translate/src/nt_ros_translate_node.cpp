@@ -85,10 +85,10 @@ int main(int argc, char **argv) {
 	table->AddTableListener(&listener);
 
 	// Topic subscription
-	result_sub = node_handle.subscribe("/bot_vision/result_horiz_angle", 1, result_callback);
-    angle_offset_sub = node_handle.subscribe("/bot_vision/result_angle_offset", 1, angle_offset_callback);
-    x_offset_sub = node_handle.subscribe("/bot_vision/result_x_offset", 1, x_offset_callback);
-    y_offset_sub = node_handle.subscribe("/bot_vision/result_y_offset", 1, y_offset_callback);
+	result_sub = node_handle.subscribe("/vision_processing_node/result_horiz_angle", 1, result_callback);
+    angle_offset_sub = node_handle.subscribe("/vision_processing_node/result_angle_offset", 1, angle_offset_callback);
+    x_offset_sub = node_handle.subscribe("/vision_processing_node/result_x_offset", 1, x_offset_callback);
+    y_offset_sub = node_handle.subscribe("/vision_processing_node/result_y_offset", 1, y_offset_callback);
 
 	// Service client setup
 	vision_scli = node_handle.serviceClient<std_srvs::SetBool>("/vision_processing_node/enable_vision");
