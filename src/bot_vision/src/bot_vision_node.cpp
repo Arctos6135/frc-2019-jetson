@@ -74,6 +74,26 @@ bool is_valid_contour(const std::vector<cv::Point> &contour, const cv::RotatedRe
 		return false;
 	}
 }
+float rotatedrect_angle(const cv::RotatedRect &rect) {
+	if(rect.size.width < rect.size.height) {
+		return rect.angle + 180;
+	}
+	else {
+		return rect.angle + 90;
+	}
+}
+bool is_valid_pair(const std::pair<cv::RotatedRect, cv::RotatedRect> &rects) {
+	const cv::RotatedRect *left, *right;
+	if (rects.first.center.x < rects.second.center.x) {
+		left = &rects.first;
+		right = &rects.second;
+	}
+	else {
+		right = &rects.first;
+		left = &rects.second;
+	}
+	return rotatedrect_angle(*left) < 90 && rotatedrect_angle(*right) > 90;
+}
 
 double get_horiz_angle(const double x) {
     double slope = (x - camera_width / 2) / camera_horiz_f;
@@ -135,7 +155,11 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
             for(int j = i + 1; j < rects.size(); j ++) {
                 // Verify that the y diff is acceptable
                 if(std::abs(rects[i].center.y - rects[j].center.y) <= max_y_diff) {
-                    matching.push_back(std::make_pair(rects[i], rects[j]));
+					// Verify other things
+					auto rects = std::make_pair(rects[i], rects[j]);
+					if(is_valid_pair(rects)) {
+						matching.push_back(rects);
+					}
                 }
             }
         }
