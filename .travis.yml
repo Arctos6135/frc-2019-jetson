@@ -12,19 +12,19 @@ install:
   - sudo bash ./build_setup.sh
 
 script:
-  - catkin build
+  - sudo catkin build
 
 after_success:
   - export SHORT_COMMIT=${TRAVIS_COMMIT:0:7}
   - >
     curl --request 'POST' 
     --header 'Content-Type: text/plain; charset=utf-8' 
-    --data "&#9989; The latest commit pushed to **frc-2019-jetson** (commit *$SHORT_COMMIT* on branch *$TRAVIS_BRANCH*) has **passed** CI checks on **$TRAVIS_JDK_VERSION**!"
+    --data "&#9989; The latest commit pushed to **frc-2019-jetson** (commit *$SHORT_COMMIT* on branch *$TRAVIS_BRANCH*) has **passed** CI checks!" 
     $WEBHOOK_URL
 after_failure:
   - export SHORT_COMMIT=${TRAVIS_COMMIT:0:7}
   - >
     curl --request 'POST' 
     --header 'Content-Type: text/plain; charset=utf-8' 
-    --data "&#10060; The latest commit pushed to **frc-2019-jetson** (commit *$SHORT_COMMIT* on branch *$TRAVIS_BRANCH*) has **failed** CI checks on **$TRAVIS_JDK_VERSION**!" 
+    --data "&#10060; The latest commit pushed to **frc-2019-jetson** (commit *$SHORT_COMMIT* on branch *$TRAVIS_BRANCH*) has **failed** CI checks!" 
     $WEBHOOK_URL
