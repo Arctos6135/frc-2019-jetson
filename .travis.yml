@@ -1,5 +1,7 @@
 language: cpp
 
+dist: xenial
+
 # The encrypted webhook URL
 env:
   global:
