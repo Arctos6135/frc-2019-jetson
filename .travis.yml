@@ -12,7 +12,6 @@ install:
   - sudo bash ./build_setup.sh
 
 script:
-  - source /opt/ros/kinetic/setup.bash
   - sudo catkin build
 
 after_success:
