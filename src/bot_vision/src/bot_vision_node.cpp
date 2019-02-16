@@ -156,9 +156,9 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
                 // Verify that the y diff is acceptable
                 if(std::abs(rects[i].center.y - rects[j].center.y) <= max_y_diff) {
 					// Verify other things
-					auto rects = std::make_pair(rects[i], rects[j]);
-					if(is_valid_pair(rects)) {
-						matching.push_back(rects);
+					auto rect_pair = std::make_pair(rects[i], rects[j]);
+					if(is_valid_pair(rect_pair)) {
+						matching.push_back(rect_pair);
 					}
                 }
             }
