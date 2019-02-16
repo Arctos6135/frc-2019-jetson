@@ -15,6 +15,10 @@ script:
   - source /opt/ros/kinetic/setup.bash
   - sudo catkin build
 
+cache:
+  directories:
+    - /opt/ros
+
 after_success:
   - export SHORT_COMMIT=${TRAVIS_COMMIT:0:7}
   - >
