@@ -59,6 +59,10 @@ class VisionTableListener : public ITableListener {
         else if(key.compare("shutdown") == 0 && value->IsBoolean() && value->GetBoolean()) {
             std::system("shutdown -P now");
         }
+        else if(key.compare("restart-server") == 0 && value->isBoolean() && value->GetBoolean()) {
+            table->PutBoolean("restart-server", false);
+            std::system("rosnode kill /main_video_server");
+        }
 	}
 };
 
