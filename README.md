@@ -1,4 +1,5 @@
 # frc-2019-jetson
+[![Build Status](https://travis-ci.com/Arctos6135/frc-2019-jetson.svg?branch=master)](https://travis-ci.com/Arctos6135/frc-2019-jetson)<br>
 Team Arctos 6315's 2019 Jetson TX1 code. Made with help from [@mincrmatt12](https://github.com/mincrmatt12).
 
 <img src="https://upload.wikimedia.org/wikipedia/en/thumb/c/cf/Flag_of_Canada.svg/1280px-Flag_of_Canada.svg.png" alt="CANADA" height="50px"/>&nbsp;&nbsp;&nbsp;<img src="https://avatars0.githubusercontent.com/u/16629663?s=200&v=4" alt="Arctos" height="50px"/>&nbsp;&nbsp;&nbsp;<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/bb/Ros_logo.svg/2000px-Ros_logo.svg.png" alt="ROS" height="50px"/>&nbsp;&nbsp;&nbsp;<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/OpenCV_Logo_with_text_svg_version.svg/1200px-OpenCV_Logo_with_text_svg_version.svg.png" alt="OpenCV" height="50px"/>
@@ -17,8 +18,9 @@ It is capable of detecting the relative position, direction and orientation of t
 The code is written in C++ with ROS.
 
 ### To Build
-* `catkin init`
-* `wstool update`
+* `bash ./build_setup.bash`
+* `source /opt/ros/kinetic/setup.bash`
+* `catkin build`
 
 ### To Run
 * `source devel/setup.bash`
