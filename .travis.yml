@@ -1,0 +1,35 @@
+language: cpp
+
+dist: xenial
+
+# The encrypted webhook URL
+env:
+  global:
+    secure: "kKcz0JxivqZBRNf5tYMmeKOnv9F9UjsDy5aNOu5IUYxgCNEfFLTfBti2spgLf9BnhEXBVYIHpG/d+253Y6+RJfQdM6Y67RMeAQqIXNoHpEPu01OHR0AYTClIyXn7xer+yr6fh5vKvSU7Mm72So2HfZijDM57I95FHI9T4kURm/ehNhecIjbDB4edokG9bNO9KeBjmaV9HqqUZsRlnLldjmP4Noq0vKE2yxwUfRrV9Zu2GtwH9CC/Lta26LsvFnuoEY4o3bJwa9mwqy8/GG34OH749SYgitZGED9sSCeFQT7oF9NgoI74o2QYMGiaOUiR2oXJ3iKVNDpfUPDZFKnx3zj/GyRDfijp9J8JDKknDXyT6sVjPX7BJ1VZrwchMd6GGq74fBiKrYZVyktCx/nBmehYrx1MBxUl3bAUuuzPBY9lBdDnXJ6PrM4hPG2LwxJwyOENG4Z3oFZ09GjD3U7qzf7883gmSVfIR56x48UYn8LFsiem/IryiD4wPZxDzf5v6eqFCKXrL1Gk8SCabrZOVKsTmvH8fbUdUnty7RO/CnwfNDz8gr9MkavwYAVLsbEgSwpSbntvzGc3RbG/M/SMyxAlsLDlV8NTmBFN0GUFjnGrcNTcGCUTptbtVSj6VCw2CIwCgMkp/IQ5XX/SaYajgPKJe3WifHlmKFcELqGjw5k="
+
+install: 
+  - sudo bash ./install_ros.sh
+  - sudo bash ./build_setup.sh
+
+script:
+  - source /opt/ros/kinetic/setup.bash
+  - sudo catkin build
+
+cache:
+  directories:
+    - /opt/ros
+
+after_success:
+  - export SHORT_COMMIT=${TRAVIS_COMMIT:0:7}
+  - >
+    curl --request 'POST' 
+    --header 'Content-Type: text/plain; charset=utf-8' 
+    --data "&#9989; The latest commit pushed to **frc-2019-jetson** (commit *$SHORT_COMMIT* on branch *$TRAVIS_BRANCH*) has **passed** CI checks!" 
+    $WEBHOOK_URL
+after_failure:
+  - export SHORT_COMMIT=${TRAVIS_COMMIT:0:7}
+  - >
+    curl --request 'POST' 
+    --header 'Content-Type: text/plain; charset=utf-8' 
+    --data "&#10060; The latest commit pushed to **frc-2019-jetson** (commit *$SHORT_COMMIT* on branch *$TRAVIS_BRANCH*) has **failed** CI checks!" 
+    $WEBHOOK_URL
