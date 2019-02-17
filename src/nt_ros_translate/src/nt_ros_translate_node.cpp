@@ -57,6 +57,7 @@ class VisionTableListener : public ITableListener {
 		}
         // Jetson graceful shutdown
         else if(key.compare("shutdown") == 0 && value->IsBoolean() && value->GetBoolean()) {
+            table->PutBoolean("shutdown", false);
             std::system("shutdown -P now");
         }
         else if(key.compare("restart-server") == 0 && value->isBoolean() && value->GetBoolean()) {
