@@ -17,17 +17,23 @@ This code runs on an NVIDIA Jetson TX1 and communicates with the roboRIO via Net
 It is capable of detecting the relative position, direction and orientation of the target to within 2% error and has an MJPEG camera stream on port 1180.
 The code is written in C++ with ROS.
 
+### Prerequisites
+
+ROS kinetic and the package 'ros-kinetic-web-video-server'
+
 ### To Build
-* `bash ./build_setup.bash`
-* `source /opt/ros/kinetic/setup.bash`
-* `catkin build`
+
+* `wstool update -t src`
+* `source /opt/ros/kinetic/setup.bash && catkin_make`
 
 ### To Run
+
 * `source devel/setup.bash`
 * `roslaunch bot bot.launch`
 
 ### NetworkTables
-The program communicates with the roboRIO via the table `roborio-jetson`. 
+
+The program communicates with the roboRIO via the table `roborio-jetson`.
 
 | Table Entry | Modified By | Type | Purpose |
 | ----------- | ----------- | ---- | ------- |
