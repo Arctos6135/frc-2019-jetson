@@ -10,6 +10,7 @@
 #include <memory>
 
 #include <cstdlib>
+#include <unistd.h>
 
 // NetworkTables IP address
 std::string nt_ip_addr;
@@ -70,13 +71,13 @@ class VisionTableListener : public ITableListener {
 int main(int argc, char **argv) {
 	
 	ros::init(argc, argv, "nt_ros_translate_node");
-	
+	ROS_INFO("Initializing...");
 	ros::NodeHandle node_handle("~");
 
 	// Retrieve parameters
 	node_handle.param<std::string>("nt_ip_addr", nt_ip_addr, "10.61.35.2");
 
-	ROS_INFO_STREAM("Connecting to NetworkTables with IP " << nt_ip_addr);
+	ROS_INFO("Connecting to NetworkTables with IP %s", nt_ip_addr.c_str());
 
 	// NT setup
 	NetworkTable::SetClientMode();
@@ -98,8 +99,12 @@ int main(int argc, char **argv) {
 	// Service client setup
 	vision_scli = node_handle.serviceClient<std_srvs::SetBool>("/vision_processing_node/enable_vision");
 
+	ROS_INFO("Initialization complete.");
+	sleep(5);
+
 	// Notify the rio that the Jetson vision is online
 	table->PutBoolean("vision-online", true);
+	ROS_INFO("vision-online has been set to true");
 
 	ros::Rate rate(25);
 
