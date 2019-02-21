@@ -37,10 +37,5 @@ SHELL ["/bin/bash", "-c"]
 
 RUN wstool update -t src
 RUN source /opt/ros/kinetic/setup.bash && catkin_make
-RUN tar -cvzf frc-2019-jetson-build.tar.gz .
-
-# get build
-
-CMD cat frc-2019-jetson-build.tar.gz
 
 ENV DEBIAN_FRONTEND teletype
