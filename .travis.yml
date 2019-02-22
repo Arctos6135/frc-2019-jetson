@@ -13,9 +13,9 @@ services:
 before_install:
   - tar -czvf frc-2019-jetson-src.tar.gz src
   - docker pull ros:kinetic-perception-xenial
-  - docker build --build-arg projecttarball=./frc-2019-jetson-src.tar.gz -t arctos:ros-build .
 
 script:
+  - docker build --build-arg projecttarball=./frc-2019-jetson-src.tar.gz -t arctos:ros-build .
   - echo "Done."
 
 after_success:
