@@ -46,6 +46,18 @@ def is_valid_pair(rects):
         left = rects[1]
     return rotatedrect_angle(left) < 90 and rotatedrect_angle(right) > 90
 
+def draw_rect(img, rect, color=(255, 0, 0), thickness=3):
+    box = np.int0(cv2.boxPoints(rect))
+    cv2.drawContours(img, [box], 0, color, thickness)
+
+colors = [
+    (0, 0, 0xFF),
+    (0, 0x80, 0x80),
+    (0, 255, 0),
+    (0x80, 0x80, 0),
+    (255, 0, 0)
+]
+
 def process_image(img):
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV_FULL)
     mono = cv2.inRange(hsv, thresh_low, thresh_high)
@@ -66,7 +78,14 @@ def process_image(img):
         for j in range(i + 1, len(rects)):
             if abs(rects[i][0][1] - rects[j][0][1]) <= max_y_diff and is_valid_pair([rects[i], rects[j]]):
                 matching.append([rects[i], rects[j]])
-
+    if len(matching) > 0:
+        matching.sort(reverse = True, key = lambda p: combined_area(p))
+        for pair, color in zip(matching, colors):
+            draw_rect(img, pair[0], color)
+            draw_rect(img, pair[1], color)
+        cv2.imshow("Targets", img)
+    else:
+        print("No targets found!")
 
 
 if __name__ == "__main__":
