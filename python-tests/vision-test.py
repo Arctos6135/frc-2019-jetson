@@ -46,9 +46,15 @@ def is_valid_pair(rects):
         left = rects[1]
     return rotatedrect_angle(left) < 90 and rotatedrect_angle(right) > 90
 
-def draw_rect(img, rect, color=(255, 0, 0), thickness=3):
+def draw_rect(img, rect, color=(255, 0, 0), thickness=2):
     box = np.int0(cv2.boxPoints(rect))
     cv2.drawContours(img, [box], 0, color, thickness)
+
+def draw_rect_of_rects(img, rect0, rect1, color=(255, 0, 0), thickness=4):
+    points = np.append(cv2.boxPoints(rect0), cv2.boxPoints(rect1), axis=0)
+    print(points)
+    x, y, w, h = cv2.boundingRect(points)
+    cv2.rectangle(img, (x,y), (x+w,y+h), color, thickness)
 
 colors = [
     (0, 0, 0xFF),
@@ -83,6 +89,7 @@ def process_image(img):
         for pair, color in zip(matching, colors):
             draw_rect(img, pair[0], color)
             draw_rect(img, pair[1], color)
+            draw_rect_of_rects(img, pair[0], pair[1], color)
         cv2.imshow("Targets", img)
     else:
         print("No targets found!")
