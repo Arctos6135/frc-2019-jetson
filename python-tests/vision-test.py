@@ -35,7 +35,7 @@ def rotatedrect_angle(rect):
     else:
         return rect[2] + 90
 
-def is_valid_pair(rects):
+def is_valid_pair(rects, all_rects):
     left = None
     right = None
     if rects[0][0][0] < rects[1][0][0]:
@@ -44,7 +44,15 @@ def is_valid_pair(rects):
     else:
         right = rects[0]
         left = rects[1]
-    return rotatedrect_angle(left) < 90 and rotatedrect_angle(right) > 90
+    if rotatedrect_angle(left) < 90 and rotatedrect_angle(right) > 90:
+        for rect in all_rects:
+            if rect != rects[0] and rect != rects[1]:
+                if rect[0][0] > left[0][0] and rect[0][0] < right[0][0]:
+                    print(left[0], right[0], rect[0])
+                    return False
+        return True
+    else:
+        return False
 
 def draw_rect(img, rect, color=(255, 0, 0), thickness=2):
     box = np.int0(cv2.boxPoints(rect))
@@ -52,7 +60,6 @@ def draw_rect(img, rect, color=(255, 0, 0), thickness=2):
 
 def draw_rect_of_rects(img, rect0, rect1, color=(255, 0, 0), thickness=4):
     points = np.append(cv2.boxPoints(rect0), cv2.boxPoints(rect1), axis=0)
-    print(points)
     x, y, w, h = cv2.boundingRect(points)
     cv2.rectangle(img, (x,y), (x+w,y+h), color, thickness)
 
@@ -83,7 +90,7 @@ def process_image(img):
     matching = []
     for i in range(0, len(rects)):
         for j in range(i + 1, len(rects)):
-            if abs(rects[i][0][1] - rects[j][0][1]) <= max_y_diff and is_valid_pair([rects[i], rects[j]]):
+            if abs(rects[i][0][1] - rects[j][0][1]) <= max_y_diff and is_valid_pair([rects[i], rects[j]], rects):
                 matching.append([rects[i], rects[j]])
     if len(matching) > 0:
         matching.sort(reverse = True, key = lambda p: combined_area(p))
