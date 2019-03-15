@@ -57,8 +57,8 @@ int camera_vert_f;
 double tape_width = 5.825572030188476;
 double tape_gap = 11.0629666927;
 
-inline float combined_area(const std::pair<cv::RotatedRect, cv::RotatedRect> &contours) {
-    return contours.first.size.area() + contours.second.size.area();
+inline float combined_area(const std::pair<cv::RotatedRect, cv::RotatedRect> &rects) {
+    return rects.first.size.area() + rects.second.size.area();
 }
 
 // The contour is checked with this function for validity
