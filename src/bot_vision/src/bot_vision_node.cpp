@@ -148,7 +148,7 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
         }
 
         // Make a vector of pairs of rects
-        // This will sore all the pairs of rects that are about the same height.
+        // This will store all the pairs of rects that are about the same height.
         std::vector<std::pair<cv::RotatedRect, cv::RotatedRect>> matching;
         // Go through all unique combinations
         for(int i = 0; i < rects.size(); i ++) {
