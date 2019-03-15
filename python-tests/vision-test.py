@@ -58,10 +58,11 @@ def draw_rect_of_rects(img, rect0, rect1, color=(255, 0, 0), thickness=4):
 
 colors = [
     (0, 0, 0xFF),
-    (0, 0x80, 0x80),
-    (0, 255, 0),
-    (0x80, 0x80, 0),
-    (255, 0, 0)
+    (0, 0xFF, 0xFF),
+    (0, 0xFF, 0),
+    (0xFF, 0xFF, 0),
+    (0xFF, 0, 0),
+    (0xFF, 0, 0xFF)
 ]
 
 def process_image(img):
