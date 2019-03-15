@@ -49,7 +49,7 @@ def is_valid_pair(rects):
 def process_image(img):
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV_FULL)
     mono = cv2.inRange(hsv, thresh_low, thresh_high)
-    kern = cv2.getStructuringElement(cv.MORPH_RECT, (morph_kernel_size, morph_kernel_size))
+    kern = cv2.getStructuringElement(cv2.MORPH_RECT, (morph_kernel_size, morph_kernel_size))
     cv2.morphologyEx(mono, cv2.MORPH_OPEN, kern)
     cv2.morphologyEx(mono, cv2.MORPH_CLOSE, kern)
 
@@ -71,7 +71,8 @@ def process_image(img):
 
 if __name__ == "__main__":
     from glob import glob
-    for img in glob("*.png"):
+    for img in glob("**/*.png"):
+        print(f"Processing {img}")
         process_image(cv2.imread(img))
         cv2.waitKey(-1)
 
