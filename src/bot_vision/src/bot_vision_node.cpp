@@ -82,6 +82,15 @@ float rotatedrect_angle(const cv::RotatedRect &rect) {
 		return rect.angle + 90;
 	}
 }
+
+inline bool operator==(const cv::RotatedRect &a, const cv::RotatedRect &b) {
+	return a.center.x == b.center.x && a.center.y == b.center.y && a.size.width == b.size.width 
+			&& a.size.height == b.size.height && a.angle == b.angle;
+}
+inline bool operator!=(const cv::RotatedRect &a, const cv::RotatedRect &b) {
+	return !(a == b);
+}
+
 bool is_valid_pair(const std::pair<cv::RotatedRect, cv::RotatedRect> &rects, const std::vector<cv::RotatedRect> &all_rects) {
 	const cv::RotatedRect *left, *right;
 	if (rects.first.center.x < rects.second.center.x) {
