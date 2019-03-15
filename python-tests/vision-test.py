@@ -93,6 +93,7 @@ def process_image(img):
             draw_rect_of_rects(img, pair[0], pair[1], color)
         cv2.imshow("Targets", img)
     else:
+        cv2.imshow("Targets", img)
         print("No targets found!")
 
 
