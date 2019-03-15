@@ -53,13 +53,13 @@ def process_image(img):
     cv2.morphologyEx(mono, cv2.MORPH_OPEN, kern)
     cv2.morphologyEx(mono, cv2.MORPH_CLOSE, kern)
 
-    contours = cv2.findContours(mono, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    _, contours, _ = cv2.findContours(mono, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     rects = []
     for contour in contours:
         rect = cv2.minAreaRect(contour)
         
         if is_valid_contour(contour, rect):
-            rects.append(bound)
+            rects.append(rect)
     
     matching = []
     for i in range(0, len(rects)):
