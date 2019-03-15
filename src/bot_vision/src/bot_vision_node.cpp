@@ -82,7 +82,7 @@ float rotatedrect_angle(const cv::RotatedRect &rect) {
 		return rect.angle + 90;
 	}
 }
-bool is_valid_pair(const std::pair<cv::RotatedRect, cv::RotatedRect> &rects) {
+bool is_valid_pair(const std::pair<cv::RotatedRect, cv::RotatedRect> &rects, const std::vector<cv::RotatedRect> &all_rects) {
 	const cv::RotatedRect *left, *right;
 	if (rects.first.center.x < rects.second.center.x) {
 		left = &rects.first;
@@ -92,7 +92,18 @@ bool is_valid_pair(const std::pair<cv::RotatedRect, cv::RotatedRect> &rects) {
 		right = &rects.first;
 		left = &rects.second;
 	}
-	return rotatedrect_angle(*left) < 90 && rotatedrect_angle(*right) > 90;
+
+	if(rotatedrect_angle(*left) < 90 && rotatedrect_angle(*right) > 90) {
+		for(auto rect : all_rects) {
+			if(rect != *left && rect != *right) {
+				if(rect.center.x > left.center.x && rect.center.y < right.center.y) {
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+	return false;
 }
 
 double get_horiz_angle(const double x) {
