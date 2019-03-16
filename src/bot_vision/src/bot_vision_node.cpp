@@ -115,22 +115,22 @@ bool is_valid_pair(const std::pair<cv::RotatedRect, cv::RotatedRect> &rects, con
 	return false;
 }
 
-double get_horiz_angle(const double x) {
+inline double get_horiz_angle(const double x) {
     double slope = (x - camera_width / 2) / camera_horiz_f;
     return std::atan(slope);
 }
-double get_horiz_angle(const cv::Point2f &point) {
+inline double get_horiz_angle(const cv::Point2f &point) {
 	return get_horiz_angle(point.x);
 }
-double get_vert_angle(const double y) {
+inline double get_vert_angle(const double y) {
     double slope = (y - camera_height / 2) / camera_vert_f;
     return std::atan(slope);
 }
-double get_vert_angle(const cv::Point2f &point) {
+inline double get_vert_angle(const cv::Point2f &point) {
     return get_vert_angle(point.y);
 }
 
-double get_distance_v(const double high, const double low) {
+inline double get_distance_v(const double high, const double low) {
     double theta = get_vert_angle(low);
     double phi = get_vert_angle(high);
     return tape_width / (std::tan(phi) - std::tan(theta));
