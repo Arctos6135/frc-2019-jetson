@@ -20,15 +20,17 @@ The code is written in C++ with ROS.
 
 ### Prerequisites
 
-ROS kinetic and the package 'ros-kinetic-web-video-server'
+ROS Kinetic and the package 'ros-kinetic-web-video-server'. Note that unfortunately ROS Kinetic is only avaiable on Ubuntu 16.04 (Xenial).
 
 ### To Build
-
-* `wstool update -t src`
-* `source /opt/ros/kinetic/setup.bash && catkin_make`
+#### Setup
+* `bash ./install_ros.sh` if ROS is not installed
+* `bash ./build_setup.sh`
+* `source /opt/ros/kinetic/setup.bash`
+### Build
+* `catkin build`
 
 ### To Run
-
 * `source devel/setup.bash`
 * `roslaunch bot bot.launch`
 
@@ -43,6 +45,7 @@ The program communicates with the roboRIO via the table `roborio-jetson`.
 | `enable-success` | Jetson | boolean | Indicates whether the vision enable operation was successful. |
 | `shutdown` | roboRIO | boolean | If set to true, the Jetson will execute `shutdown -P now` and gracefully shut down. |
 | `horizontal-angle` | Jetson | double (degrees) | The horizontal direction of the centre of the target relative to the centre of the camera. A negative angle means that the target is to the left and vice versa. |
-| `angle-offset` | Jetson | double (degrees) | The horizontal angle difference between the centre of the camera and the hatch placement angle |
-| `x-offset` | Jetson | double (inches) | The left-right distance offset of the target |
-| `y-offset` | Jetson | double (inches) | The forwards-backwards distance offset of the target|
+| `angle-offset` | Jetson | double (degrees) | The horizontal angle difference between the centre of the camera and the hatch placement angle. |
+| `x-offset` | Jetson | double (inches) | The left-right distance offset of the target. |
+| `y-offset` | Jetson | double (inches) | The forwards-backwards distance offset of the target. |
+| `restart-server` | roboRIO | boolean | If set to true, the camera server will be restarted. |
