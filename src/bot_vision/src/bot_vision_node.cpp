@@ -123,7 +123,7 @@ double get_horiz_angle(const cv::Point2f &point) {
 	return get_horiz_angle(point.x);
 }
 double get_vert_angle(const double y) {
-    double slope = (y - camera_width / 2) / camera_vert_f;
+    double slope = (y - camera_height / 2) / camera_vert_f;
     return std::atan(slope);
 }
 double get_vert_angle(const cv::Point2f &point) {

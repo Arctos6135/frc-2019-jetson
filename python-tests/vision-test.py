@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from math import tan, atan, pi
 
 thresh_high_h = 130
 thresh_high_s = 255
@@ -17,6 +18,17 @@ fullness_high = 1.0
 morph_kernel_size = 5
 
 max_y_diff = 50
+
+camera_horiz_fov = 61
+camera_vert_fov = 37
+camera_width = 1280
+camera_height = 720
+
+camera_horiz_f = camera_width / 2 / tan(camera_horiz_fov) / 2 * pi / 180
+camera_vert_f = camera_height / 2 / tan(camera_vert_fov) / 2 * pi / 180
+
+tape_width = 5.825572030188476
+tape_gap = 11.0629666927
 
 def rect_area(rect):
     return rect[1][0] * rect[1][1]
@@ -58,6 +70,10 @@ def is_valid_pair(rects, all_rects):
         return True
     else:
         return False
+
+def get_vert_angle(y):
+    slope = (y - camera_width / 2) / camera_vert_f
+    return atan(slope)
 
 def draw_rect(img, rect, color=(255, 0, 0), thickness=2):
     box = np.int0(cv2.boxPoints(rect))
