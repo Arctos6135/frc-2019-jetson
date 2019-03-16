@@ -54,11 +54,11 @@ int camera_horiz_f;
 int camera_vert_f;
 
 // Bounding box
-double tape_width = 5.825572030188476;
+double tape_height = 5.825572030188476;
 double tape_gap = 11.0629666927;
 
-inline float combined_area(const std::pair<cv::RotatedRect, cv::RotatedRect> &contours) {
-    return contours.first.size.area() + contours.second.size.area();
+inline float combined_area(const std::pair<cv::RotatedRect, cv::RotatedRect> &rects) {
+    return rects.first.size.area() + rects.second.size.area();
 }
 
 // The contour is checked with this function for validity
@@ -82,7 +82,16 @@ float rotatedrect_angle(const cv::RotatedRect &rect) {
 		return rect.angle + 90;
 	}
 }
-bool is_valid_pair(const std::pair<cv::RotatedRect, cv::RotatedRect> &rects) {
+
+inline bool operator==(const cv::RotatedRect &a, const cv::RotatedRect &b) {
+	return a.center.x == b.center.x && a.center.y == b.center.y && a.size.width == b.size.width 
+			&& a.size.height == b.size.height && a.angle == b.angle;
+}
+inline bool operator!=(const cv::RotatedRect &a, const cv::RotatedRect &b) {
+	return !(a == b);
+}
+
+bool is_valid_pair(const std::pair<cv::RotatedRect, cv::RotatedRect> &rects, const std::vector<cv::RotatedRect> &all_rects) {
 	const cv::RotatedRect *left, *right;
 	if (rects.first.center.x < rects.second.center.x) {
 		left = &rects.first;
@@ -92,28 +101,39 @@ bool is_valid_pair(const std::pair<cv::RotatedRect, cv::RotatedRect> &rects) {
 		right = &rects.first;
 		left = &rects.second;
 	}
-	return rotatedrect_angle(*left) < 90 && rotatedrect_angle(*right) > 90;
+
+	if(rotatedrect_angle(*left) < 90 && rotatedrect_angle(*right) > 90) {
+		for(const auto &rect : all_rects) {
+			if(rect != *left && rect != *right) {
+				if(rect.center.x > left->center.x && rect.center.y < right->center.y) {
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+	return false;
 }
 
-double get_horiz_angle(const double x) {
+inline double get_horiz_angle(const double x) {
     double slope = (x - camera_width / 2) / camera_horiz_f;
     return std::atan(slope);
 }
-double get_horiz_angle(const cv::Point2f &point) {
+inline double get_horiz_angle(const cv::Point2f &point) {
 	return get_horiz_angle(point.x);
 }
-double get_vert_angle(const double y) {
-    double slope = (y - camera_width / 2) / camera_vert_f;
+inline double get_vert_angle(const double y) {
+    double slope = (y - camera_height / 2) / camera_vert_f;
     return std::atan(slope);
 }
-double get_vert_angle(const cv::Point2f &point) {
+inline double get_vert_angle(const cv::Point2f &point) {
     return get_vert_angle(point.y);
 }
 
-double get_distance_v(const double high, const double low) {
+inline double get_distance_v(const double high, const double low) {
     double theta = get_vert_angle(low);
     double phi = get_vert_angle(high);
-    return tape_width / (std::tan(phi) - std::tan(theta));
+    return tape_height / (std::tan(phi) - std::tan(theta));
 }
 // The image processing callback
 void image_callback(const sensor_msgs::ImageConstPtr& msg) {
@@ -148,7 +168,7 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
         }
 
         // Make a vector of pairs of rects
-        // This will sore all the pairs of rects that are about the same height.
+        // This will store all the pairs of rects that are about the same height.
         std::vector<std::pair<cv::RotatedRect, cv::RotatedRect>> matching;
         // Go through all unique combinations
         for(int i = 0; i < rects.size(); i ++) {
@@ -157,7 +177,7 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
                 if(std::abs(rects[i].center.y - rects[j].center.y) <= max_y_diff) {
 					// Verify other things
 					auto rect_pair = std::make_pair(rects[i], rects[j]);
-					if(is_valid_pair(rect_pair)) {
+					if(is_valid_pair(rect_pair, rects)) {
 						matching.push_back(rect_pair);
 					}
                 }
