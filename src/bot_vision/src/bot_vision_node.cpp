@@ -57,8 +57,17 @@ int camera_vert_f;
 double tape_height = 5.825572030188476;
 double tape_gap = 11.0629666927;
 
-inline float combined_area(const std::pair<cv::RotatedRect, cv::RotatedRect> &rects) {
-    return rects.first.size.area() + rects.second.size.area();
+double get_distance_v(double, double);
+inline double get_rect_distance(const cv::RotatedRect &rect) {
+	cv::Point2f points[4];
+	rect.points(points);
+	double min_y = std::min(points[0].y, std::min(points[1].y, std::min(points[2].y, points[3].y)));
+    double max_y = std::max(points[0].y, std::max(points[1].y, std::max(points[2].y, points[3].y)));
+	return get_distance_v(max_y, min_y);
+}
+
+inline float rank(const std::pair<cv::RotatedRect, cv::RotatedRect> &rects) {
+    return get_rect_distance(rects.first) + get_rect_distance(rects.second);
 }
 
 // The contour is checked with this function for validity
@@ -187,16 +196,17 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
         double x_angle = NAN;
         // Verify that there are one or more pairs of contours that match
         if(matching.size()) {
-            // Find the biggest pair
-            int biggest = -1;
+            // Find the best pair
+            int best = -1;
             for(int i = 0; i < matching.size(); i++) {
-                if(biggest == -1 || combined_area(matching[i]) > combined_area(matching[biggest])) {
-                    biggest = i;
+				// Note: the rank function was changed to give a low number for high ranks.
+                if(best == -1 || rank(matching[i]) < rank(matching[best])) {
+                    best = i;
                 }
             }
 			
 			// Calculate the midpoint
-            auto &tapes = matching[biggest];
+            auto &tapes = matching[best];
             cv::Point2f mid1 = tapes.first.center, mid2 = tapes.second.center;
             cv::Point2f mid((mid1.x + mid2.x) / 2, (mid1.y + mid2.y) / 2);
 
@@ -204,16 +214,8 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
 			double angle = get_horiz_angle(mid);
 
             // Calculate the distances from y coordinates of each piece of tape
-            cv::Point2f points[4];
-            tapes.first.points(points);
-            double min_y = std::min(points[0].y, std::min(points[1].y, std::min(points[2].y, points[3].y)));
-            double max_y = std::max(points[0].y, std::max(points[1].y, std::max(points[2].y, points[3].y)));
-            double dist1 = get_distance_v(max_y, min_y);
-
-            tapes.second.points(points);
-            min_y = std::min(points[0].y, std::min(points[1].y, std::min(points[2].y, points[3].y)));
-            max_y = std::max(points[0].y, std::max(points[1].y, std::max(points[2].y, points[3].y)));
-            double dist2 = get_distance_v(max_y, min_y);
+            double dist1 = get_rect_distance(tapes.first);
+            double dist2 = get_rect_distance(tapes.second);
 
 
             // Calculate the angle difference
