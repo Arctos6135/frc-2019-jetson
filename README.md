@@ -24,11 +24,11 @@ ROS Kinetic and the package 'ros-kinetic-web-video-server'. Note that unfortunat
 
 ### To Build
 #### Setup
-* `sudo bash ./install_ros.sh` if ROS is not installed
-* `sudo bash ./build_setup.sh`
+* `bash ./install_ros.sh` if ROS is not installed
+* `bash ./build_setup.sh`
 * `source /opt/ros/kinetic/setup.bash`
 ### Build
-* `sudo catkin build`
+* `catkin build`
 
 ### To Run
 * `source devel/setup.bash`
