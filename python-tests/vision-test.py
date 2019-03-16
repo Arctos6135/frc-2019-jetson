@@ -27,7 +27,7 @@ camera_height = 720
 camera_horiz_f = camera_width / 2 / tan(camera_horiz_fov) / 2 * pi / 180
 camera_vert_f = camera_height / 2 / tan(camera_vert_fov) / 2 * pi / 180
 
-tape_width = 5.825572030188476
+tape_height = 5.825572030188476
 tape_gap = 11.0629666927
 
 def rect_area(rect):
@@ -36,10 +36,23 @@ def rect_area(rect):
 def midpoint(a, b):
     return ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
 
-def rank(rects, width):
-    combined_area = rect_area(rects[0]) + rect_area(rects[1])
-    offcenterness = abs(width / 2 - midpoint(rects[0][0], rects[1][0])[0])
-    return combined_area - offcenterness
+def get_vert_angle(y):
+    slope = (y - camera_width / 2) / camera_vert_f
+    return atan(slope)
+
+def get_distance_v(low, high):
+    theta = get_vert_angle(low)
+    phi = get_vert_angle(high)
+    return tape_height / (tan(phi) - tan(theta))
+
+def get_rect_distance(rect):
+    points = cv2.boxPoints(rect)
+    high = max(points[0][1], max(points[1][1], max(points[2][1], points[3][1])))
+    low = min(points[0][1], min(points[1][1], min(points[2][1], points[3][1])))
+    return get_distance_v(low, high)
+
+def rank(rects):
+    return 1.0 / (get_rect_distance(rects[0]) + get_rect_distance(rects[1]))
 
 def is_valid_contour(contour, rect):
     area = cv2.contourArea(contour)
@@ -70,10 +83,6 @@ def is_valid_pair(rects, all_rects):
         return True
     else:
         return False
-
-def get_vert_angle(y):
-    slope = (y - camera_width / 2) / camera_vert_f
-    return atan(slope)
 
 def draw_rect(img, rect, color=(255, 0, 0), thickness=2):
     box = np.int0(cv2.boxPoints(rect))
@@ -115,7 +124,7 @@ def process_image(img):
                 matching.append([rects[i], rects[j]])
     if len(matching) > 0:
         _, width, _ = img.shape
-        matching.sort(reverse = True, key = lambda p: rank(p, width))
+        matching.sort(reverse = True, key = rank)
         for pair, color in zip(matching, colors):
             draw_rect(img, pair[0], color)
             draw_rect(img, pair[1], color)
