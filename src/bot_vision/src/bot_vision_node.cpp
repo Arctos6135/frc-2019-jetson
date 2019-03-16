@@ -54,7 +54,7 @@ int camera_horiz_f;
 int camera_vert_f;
 
 // Bounding box
-double tape_width = 5.825572030188476;
+double tape_height = 5.825572030188476;
 double tape_gap = 11.0629666927;
 
 inline float combined_area(const std::pair<cv::RotatedRect, cv::RotatedRect> &rects) {
@@ -133,7 +133,7 @@ inline double get_vert_angle(const cv::Point2f &point) {
 inline double get_distance_v(const double high, const double low) {
     double theta = get_vert_angle(low);
     double phi = get_vert_angle(high);
-    return tape_width / (std::tan(phi) - std::tan(theta));
+    return tape_height / (std::tan(phi) - std::tan(theta));
 }
 // The image processing callback
 void image_callback(const sensor_msgs::ImageConstPtr& msg) {
