@@ -21,8 +21,13 @@ max_y_diff = 50
 def rect_area(rect):
     return rect[1][0] * rect[1][1]
 
-def combined_area(contours):
-    return rect_area(contours[0]) + rect_area(contours[1])
+def midpoint(a, b):
+    return ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
+
+def rank(rects, width):
+    combined_area = rect_area(rects[0]) + rect_area(rects[1])
+    offcenterness = abs(width / 2 - midpoint(rects[0][0], rects[1][0])[0])
+    return combined_area - offcenterness
 
 def is_valid_contour(contour, rect):
     area = cv2.contourArea(contour)
@@ -93,7 +98,8 @@ def process_image(img):
             if abs(rects[i][0][1] - rects[j][0][1]) <= max_y_diff and is_valid_pair([rects[i], rects[j]], rects):
                 matching.append([rects[i], rects[j]])
     if len(matching) > 0:
-        matching.sort(reverse = True, key = lambda p: combined_area(p))
+        _, width, _ = img.shape
+        matching.sort(reverse = True, key = lambda p: rank(p, width))
         for pair, color in zip(matching, colors):
             draw_rect(img, pair[0], color)
             draw_rect(img, pair[1], color)
