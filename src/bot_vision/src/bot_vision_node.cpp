@@ -103,9 +103,9 @@ bool is_valid_pair(const std::pair<cv::RotatedRect, cv::RotatedRect> &rects, con
 	}
 
 	if(rotatedrect_angle(*left) < 90 && rotatedrect_angle(*right) > 90) {
-		for(auto rect : all_rects) {
+		for(const auto &rect : all_rects) {
 			if(rect != *left && rect != *right) {
-				if(rect.center.x > left.center.x && rect.center.y < right.center.y) {
+				if(rect.center.x > left->center.x && rect.center.y < right->center.y) {
 					return false;
 				}
 			}
