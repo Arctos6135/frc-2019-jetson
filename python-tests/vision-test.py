@@ -24,8 +24,8 @@ camera_vert_fov = 37
 camera_width = 1280
 camera_height = 720
 
-camera_horiz_f = camera_width / 2 / tan(camera_horiz_fov) / 2 * pi / 180
-camera_vert_f = camera_height / 2 / tan(camera_vert_fov) / 2 * pi / 180
+camera_horiz_f = camera_width / 2 / tan(camera_horiz_fov / 2 * pi / 180)
+camera_vert_f = camera_height / 2 / tan(camera_vert_fov / 2 * pi / 180)
 
 tape_height = 5.825572030188476
 tape_gap = 11.0629666927
@@ -52,10 +52,15 @@ def get_rect_distance(rect):
     return get_distance_v(low, high)
 
 def rank(rects):
-    return 1.0 / (get_rect_distance(rects[0]) + get_rect_distance(rects[1]))
+    d0 = get_rect_distance(rects[0])
+    d1 = get_rect_distance(rects[1])
+    print("Distances", d0, d1)
+    return 1.0 / (d0 + d1)
 
 def is_valid_contour(contour, rect):
     area = cv2.contourArea(contour)
+    if rect_area(rect) == 0:
+        return False
     fullness = area / rect_area(rect)
     return fullness <= fullness_high and fullness >= fullness_low
 
@@ -137,8 +142,8 @@ def process_image(img):
 
 if __name__ == "__main__":
     from glob import glob
-    for img in glob("**/*.png"):
-        print(f"Processing {img}")
+    for img in glob("**/*.png", recursive=True):
+        print(f"\u001b[1;32mProcessing {img}\u001b[0m")
         process_image(cv2.imread(img))
         cv2.waitKey(-1)
 
