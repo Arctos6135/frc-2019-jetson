@@ -18,16 +18,15 @@ This code runs on an NVIDIA Jetson TX1 and communicates with the roboRIO via Net
 It is capable of detecting the relative position, direction and orientation of the target to within 2% error and has an MJPEG camera stream on port 1180.
 The code is written in C++ with ROS.
 
-### Prerequisites
-
-ROS Kinetic and the package 'ros-kinetic-web-video-server'. Note that unfortunately ROS Kinetic is only avaiable on Ubuntu 16.04 (Xenial).
+### Build Environment
+NVIDIA Jetson TX1 (preferred), Ubuntu 16.04 LTS (preferred) or Ubuntu 18.04 LTS. ROS Kinetic is only available on Ubuntu 16.04; use Melodic on Ubuntu 18.04.
 
 ### To Build
 #### Setup
-* `bash ./install_ros.sh` if ROS is not installed
-* `bash ./build_setup.sh`
-* `source /opt/ros/kinetic/setup.bash`
-### Build
+* `bash ./install_ros.sh` for Ubuntu 16.04 or `bash ./install_ros_melodic.sh` for Ubuntu 18.04 if ROS is not installed
+* `bash ./build_setup.sh` for Ubuntu 16.04 or `bash ./build_setup.sh` for Ubuntu 18.04
+* `source /opt/ros/kinetic/setup.bash` for Ubuntu 16.04 or `source /opt/ros/melodic/setup.bash` for Ubuntu 18.04
+#### Build
 * `catkin build`
 
 ### To Run
