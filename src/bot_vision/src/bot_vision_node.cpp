@@ -144,6 +144,45 @@ inline double get_distance_v(const double high, const double low) {
     double phi = get_vert_angle(high);
     return tape_height / (std::tan(phi) - std::tan(theta));
 }
+
+// Keeps track of whether vision processing is on
+bool vision_on = false;
+// Publisher for exposure control
+ros::Publisher exposure_pub;
+// Vision and normal exposure values
+int vision_exposure, normal_exposure;
+// Callback for the service
+bool enable_vision_callback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &resp) {
+	if(req.data) {
+		vision_on = true;
+		// Publish the exposure to set it
+		std_msgs::Int32 m;
+		m.data = vision_exposure;
+		exposure_pub.publish(m);
+
+		ROS_INFO_STREAM("Vision has been turned ON.");
+	}
+	else {
+		vision_on = false;
+		
+		std_msgs::Int32 m;
+		m.data = normal_exposure;
+		exposure_pub.publish(m);
+		
+		ROS_INFO_STREAM("Vision has been turned OFF.");
+	}
+	
+	resp.success = true;
+	return true;
+}
+
+bool publish_processed = false;
+bool publish_processed_callback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &resp) {
+	publish_processed = req.data;
+	resp.success = true;
+	return true;
+}
+
 // The image processing callback
 void image_callback(const sensor_msgs::ImageConstPtr& msg) {
 	if(vision_on) {
@@ -312,37 +351,6 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
 	}
 }
 
-// Keeps track of whether vision processing is on
-bool vision_on = false;
-// Publisher for exposure control
-ros::Publisher exposure_pub;
-// Vision and normal exposure values
-int vision_exposure, normal_exposure;
-// Callback for the service
-bool enable_vision_callback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &resp) {
-	if(req.data) {
-		vision_on = true;
-		// Publish the exposure to set it
-		std_msgs::Int32 m;
-		m.data = vision_exposure;
-		exposure_pub.publish(m);
-
-		ROS_INFO_STREAM("Vision has been turned ON.");
-	}
-	else {
-		vision_on = false;
-		
-		std_msgs::Int32 m;
-		m.data = normal_exposure;
-		exposure_pub.publish(m);
-		
-		ROS_INFO_STREAM("Vision has been turned OFF.");
-	}
-	
-	resp.success = true;
-	return true;
-}
-
 int main(int argc, char **argv) {
 	// Init ROS
 	ros::init(argc, argv, "bot_vision_node");
@@ -388,7 +396,8 @@ int main(int argc, char **argv) {
 	image_transport::Subscriber im_sub = im_transport.subscribe("/main_camera/image_raw", 1, image_callback);
 
 	// Advertise the service
-	ros::ServiceServer server = node_handle.advertiseService("enable_vision", enable_vision_callback);
+	ros::ServiceServer enable_vision_server = node_handle.advertiseService("enable_vision", enable_vision_callback);
+	ros::ServiceServer publish_processed_server = node_handle.advertiseService("publish_processed", publish_processed_callback);
 
 	// Run forever until shutdown
 	ros::spin();
