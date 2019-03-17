@@ -185,6 +185,11 @@ bool publish_processed_callback(std_srvs::SetBool::Request &req, std_srvs::SetBo
 
 image_transport::Publisher processed_pub;
 
+void publish_image(const cv::Mat &img) {
+	sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", image).toImageMsg();
+	processed_pub.publish(msg);
+}
+
 // The image processing callback
 void image_callback(const sensor_msgs::ImageConstPtr& msg) {
 	if(vision_on) {
@@ -200,6 +205,10 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
 				cv::Point(morph_kernel_size / 2, morph_kernel_size / 2));
 		cv::morphologyEx(mono, mono, cv::MORPH_OPEN, kernel);
 		cv::morphologyEx(mono, mono, cv::MORPH_CLOSE, kernel);
+
+		if(publish_processed) {
+			publish_image(mono);
+		}
 
         // Find contours
         std::vector<std::vector<cv::Point>> contours;
