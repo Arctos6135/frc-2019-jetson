@@ -188,7 +188,7 @@ image_transport::Publisher processed_targets_pub;
 
 inline void publish_image(const cv::Mat &img, image_transport::Publisher &pub) {
 	sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", img).toImageMsg();
-	processed_pub.publish(msg);
+	pub.publish(msg);
 }
 
 void draw_rotatedrect(cv::Mat &img, const cv::RotatedRect &rect, const cv::Scalar &color = cv::Scalar(0, 0, 255), int thickness = 3) {
@@ -200,10 +200,11 @@ void draw_rotatedrect(cv::Mat &img, const cv::RotatedRect &rect, const cv::Scala
 	cv::line(img, points[2], points[3], color, thickness);
 	cv::line(img, points[3], points[0], color, thickness);
 }
-void draw_combined_rect(cv::Mat &img, const std::pair<cv::RotatedRect, cv::RotatedRect> &rects, const cv::Scalar &color = cv::Scalar(0, 0, 255), int thickness = 5) {	cv::Point2f points[8];
+void draw_combined_rect(cv::Mat &img, const std::pair<cv::RotatedRect, cv::RotatedRect> &rects, const cv::Scalar &color = cv::Scalar(0, 0, 255), int thickness = 5) {
+	cv::Point2f points[8];
 	rects.first.points(points);
 	rects.second.points(points + 4); // I love pointers
-	auto rect = cv::boundingRect(points);
+	auto rect = cv::boundingRect(std::vector<cv::Point2f>(points));
 	cv::rectangle(img, rect.tl(), rect.br(), color, thickness);
 }
 
@@ -441,8 +442,8 @@ int main(int argc, char **argv) {
 	// Use a queue size of 1 so unprocessed images are discarded
 	image_transport::Subscriber im_sub = im_transport.subscribe("/main_camera/image_raw", 1, image_callback);
 	// Set up topics for processed images
-	processed_mono_pub = it.advertise("thresholded_image", 1);
-	processed_targets_pub = it.advertise("identified_targets", 1);
+	processed_mono_pub = im_transport.advertise("thresholded_image", 1);
+	processed_targets_pub = im_transport.advertise("identified_targets", 1);
 
 	// Advertise the service
 	ros::ServiceServer enable_vision_server = node_handle.advertiseService("enable_vision", enable_vision_callback);
