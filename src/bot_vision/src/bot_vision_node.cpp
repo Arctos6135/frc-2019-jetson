@@ -186,7 +186,7 @@ bool publish_processed_callback(std_srvs::SetBool::Request &req, std_srvs::SetBo
 image_transport::Publisher processed_pub;
 
 void publish_image(const cv::Mat &img) {
-	sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", image).toImageMsg();
+	sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", img).toImageMsg();
 	processed_pub.publish(msg);
 }
 
