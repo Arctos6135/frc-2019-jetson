@@ -204,7 +204,9 @@ void draw_combined_rect(cv::Mat &img, const std::pair<cv::RotatedRect, cv::Rotat
 	cv::Point2f points[8];
 	rects.first.points(points);
 	rects.second.points(points + 4); // I love pointers
-	auto rect = cv::boundingRect(std::vector<cv::Point2f>(points));
+	std::vector<cv::Point2f> pts;
+	pts.assign(points, points + 8);
+	auto rect = cv::boundingRect(pts);
 	cv::rectangle(img, rect.tl(), rect.br(), color, thickness);
 }
 
