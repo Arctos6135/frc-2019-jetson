@@ -122,7 +122,7 @@ public:
     // create Services
     service_start_ = node_.advertiseService("start_capture", &UsbCamNode::service_start_cap, this);
     service_stop_ = node_.advertiseService("stop_capture", &UsbCamNode::service_stop_cap, this);
-	exposure_sub_ = node_.subscribe("exposure", 2, &UsbCamNode::exposure_cb, this);
+	  exposure_sub_ = node_.subscribe("exposure", 2, &UsbCamNode::exposure_cb, this);
 
     // check for default camera info
     if (!cinfo_->isCalibrated())
