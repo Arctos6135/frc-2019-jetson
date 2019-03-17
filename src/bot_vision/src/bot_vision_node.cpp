@@ -199,8 +199,7 @@ void draw_rotatedrect(cv::Mat &img, const cv::RotatedRect &rect, const cv::Scala
 	cv::line(img, points[2], points[3], color, thickness);
 	cv::line(img, points[3], points[0], color, thickness);
 }
-void draw_combined_rect(cv::Mat &img, const std::pair<cv::RotatedRect, cv::RotatedRect> &rects, const cv::Scalar &color = cv::Scalar(0, 0, 255), int thickness = 3) {
-	cv::Point2f points[8];
+void draw_combined_rect(cv::Mat &img, const std::pair<cv::RotatedRect, cv::RotatedRect> &rects, const cv::Scalar &color = cv::Scalar(0, 0, 255), int thickness = 5) {	cv::Point2f points[8];
 	rects.first.points(points);
 	rects.second.points(points + 4); // I love pointers
 	auto rect = cv::boundingRect(points);
@@ -274,11 +273,17 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
                 }
             }
 
-			if(publish_image) {
-
+			if(publish_processed) {
 				for(int i = 0; i < matching.size(); i ++) {
-					
+					if(i != best) {
+						draw_rotatedrect(original_image, matching[i].first);
+						draw_rotatedrect(original_image, matching[i].second);
+						draw_combined_rect(original_image, matching[i]);
+					}
 				}
+				draw_rotatedrect(original_image, matching[best].first, cv::Scalar(0, 255, 0));
+				draw_rotatedrect(original_image, matching[best].second, cv::Scalar(0, 255, 0));
+				draw_combined_rect(original_image, matching[best], cv::Scalar(0, 255, 0));
 			}
 			
 			// Calculate the midpoint
