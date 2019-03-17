@@ -183,6 +183,8 @@ bool publish_processed_callback(std_srvs::SetBool::Request &req, std_srvs::SetBo
 	return true;
 }
 
+image_transport::Publisher processed_pub;
+
 // The image processing callback
 void image_callback(const sensor_msgs::ImageConstPtr& msg) {
 	if(vision_on) {
@@ -363,6 +365,11 @@ int main(int argc, char **argv) {
     x_offset_pub = node_handle.advertise<std_msgs::Float64>("result_x_offset", 2);
     y_offset_pub = node_handle.advertise<std_msgs::Float64>("result_y_offset", 2);
 	exposure_pub = node_handle.advertise<std_msgs::Int32>("/main_camera/exposure", 2);
+
+	// Init publisher for processed images
+	image_transport::ImageTransport it(node_handle);
+	processed_pub = it.advertise("processed_image", 1);
+
 	// Get the parameter values
 	node_handle.param("vision_exposure", vision_exposure, 5);
 	node_handle.param("normal_exposure", normal_exposure, 0);
