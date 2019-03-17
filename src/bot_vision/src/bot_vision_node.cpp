@@ -183,9 +183,10 @@ bool publish_processed_callback(std_srvs::SetBool::Request &req, std_srvs::SetBo
 	return true;
 }
 
-image_transport::Publisher processed_pub;
+image_transport::Publisher processed_mono_pub;
+image_transport::Publisher processed_targets_pub;
 
-inline void publish_image(const cv::Mat &img) {
+inline void publish_image(const cv::Mat &img, image_transport::Publisher &pub) {
 	sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", img).toImageMsg();
 	processed_pub.publish(msg);
 }
@@ -225,7 +226,7 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
 		cv::morphologyEx(mono, mono, cv::MORPH_CLOSE, kernel);
 
 		if(publish_processed) {
-			publish_image(mono);
+			publish_image(mono, processed_mono_pub);
 		}
 
         // Find contours
@@ -284,6 +285,8 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
 				draw_rotatedrect(original_image, matching[best].first, cv::Scalar(0, 255, 0));
 				draw_rotatedrect(original_image, matching[best].second, cv::Scalar(0, 255, 0));
 				draw_combined_rect(original_image, matching[best], cv::Scalar(0, 255, 0));
+
+				publish_image(original_image, processed_targets_pub);
 			}
 			
 			// Calculate the midpoint
@@ -406,10 +409,6 @@ int main(int argc, char **argv) {
     y_offset_pub = node_handle.advertise<std_msgs::Float64>("result_y_offset", 2);
 	exposure_pub = node_handle.advertise<std_msgs::Int32>("/main_camera/exposure", 2);
 
-	// Init publisher for processed images
-	image_transport::ImageTransport it(node_handle);
-	processed_pub = it.advertise("processed_image", 1);
-
 	// Get the parameter values
 	node_handle.param("vision_exposure", vision_exposure, 5);
 	node_handle.param("normal_exposure", normal_exposure, 0);
@@ -441,6 +440,9 @@ int main(int argc, char **argv) {
 	// Subscribe to the raw image topic
 	// Use a queue size of 1 so unprocessed images are discarded
 	image_transport::Subscriber im_sub = im_transport.subscribe("/main_camera/image_raw", 1, image_callback);
+	// Set up topics for processed images
+	processed_mono_pub = it.advertise("thresholded_image", 1);
+	processed_targets_pub = it.advertise("identified_targets", 1);
 
 	// Advertise the service
 	ros::ServiceServer enable_vision_server = node_handle.advertiseService("enable_vision", enable_vision_callback);
