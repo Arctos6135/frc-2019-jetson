@@ -190,7 +190,7 @@ inline void publish_image(const cv::Mat &img) {
 	processed_pub.publish(msg);
 }
 
-void draw_rotatedrect(cv::Mat &img, const cv::RotatedRect &rect, const cv::Scalar &color, int thickness = 3) {
+void draw_rotatedrect(cv::Mat &img, const cv::RotatedRect &rect, const cv::Scalar &color = cv::Scalar(0, 0, 255), int thickness = 3) {
 	cv::Point2f points[4];
 	rect.points(points);
 
@@ -199,11 +199,20 @@ void draw_rotatedrect(cv::Mat &img, const cv::RotatedRect &rect, const cv::Scala
 	cv::line(img, points[2], points[3], color, thickness);
 	cv::line(img, points[3], points[0], color, thickness);
 }
+void draw_combined_rect(cv::Mat &img, const std::pair<cv::RotatedRect, cv::RotatedRect> &rects, const cv::Scalar &color = cv::Scalar(0, 0, 255), int thickness = 3) {
+	cv::Point2f points[8];
+	rects.first.points(points);
+	rects.second.points(points + 4); // I love pointers
+	auto rect = cv::boundingRect(points);
+	cv::rectangle(img, rect.tl(), rect.br(), color, thickness);
+}
 
 // The image processing callback
 void image_callback(const sensor_msgs::ImageConstPtr& msg) {
 	if(vision_on) {
-		cv::Mat original_image = cv_bridge::toCvShare(msg, "bgr8")->image;
+		// Get a modifiable copy
+		// Since the camera images are either rgb8 or yuyv a copy has to be made anyways
+		cv::Mat original_image = cv_bridge::toCvCopy(msg, "bgr8")->image;
 		cv::Mat hsv, mono;
 		// Convert colour space
 		cv::cvtColor(original_image, hsv, cv::COLOR_BGR2HSV_FULL);
@@ -266,8 +275,9 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
             }
 
 			if(publish_image) {
-				for(const auto &rects : matching) {
 
+				for(int i = 0; i < matching.size(); i ++) {
+					
 				}
 			}
 			
