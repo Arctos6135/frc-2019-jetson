@@ -34,8 +34,9 @@ ROS Kinetic and the package 'ros-kinetic-web-video-server'. Note that unfortunat
 * `source devel/setup.bash`
 * `roslaunch bot bot.launch`
 
-### NetworkTables
 
+## Usage
+### NetworkTables
 The program communicates with the roboRIO via the table `roborio-jetson`.
 
 | Table Entry | Modified By | Type | Purpose |
@@ -49,3 +50,18 @@ The program communicates with the roboRIO via the table `roborio-jetson`.
 | `x-offset` | Jetson | double (inches) | The left-right distance offset of the target. |
 | `y-offset` | Jetson | double (inches) | The forwards-backwards distance offset of the target. |
 | `restart-server` | roboRIO | boolean | If set to true, the camera server will be restarted. |
+
+### Camera Streams
+Once the program has started, there will be 2 camera streams available at once on port 1180:
+* `/stream?topic=/main_camera/image_raw`
+* `/stream?topic=/secondary_camera/image_raw`
+
+You can also append additional options to the stream, such as `quality`, `width` and `height`. For example:\
+`http://10.61.35.19:1180/stream?topic=/main_camera/image_raw&quality=25&width=640&height=360`\
+will give you the main camera stream (Jetson at IP 10.61.35.19), with quality at 35% and dimensions 640x360.
+The stream is in MJPEG, so you can view it directly from the SmartDashboard.
+
+Additionally, calling the service `/vision_processing_node/publish_processed` with data `true` will activate two more streams:
+* `/stream?topic=/vision_processing_node/thresholded_image`
+* `/stream?topic=/vision_processing_node/identified_targets`
+These streams are only updated when vision is active, and contain the image after thresholding, and the identified targets, respectively.
