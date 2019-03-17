@@ -18,24 +18,24 @@ This code runs on an NVIDIA Jetson TX1 and communicates with the roboRIO via Net
 It is capable of detecting the relative position, direction and orientation of the target to within 2% error and has an MJPEG camera stream on port 1180.
 The code is written in C++ with ROS.
 
-### Prerequisites
-
-ROS Kinetic and the package 'ros-kinetic-web-video-server'. Note that unfortunately ROS Kinetic is only avaiable on Ubuntu 16.04 (Xenial).
+### Build Environment
+NVIDIA Jetson TX1 (preferred), Ubuntu 16.04 LTS (preferred) or Ubuntu 18.04 LTS. ROS Kinetic is only available on Ubuntu 16.04; use Melodic on Ubuntu 18.04.
 
 ### To Build
 #### Setup
-* `bash ./install_ros.sh` if ROS is not installed
-* `bash ./build_setup.sh`
-* `source /opt/ros/kinetic/setup.bash`
-### Build
+* `bash ./install_ros.sh` for Ubuntu 16.04 or `bash ./install_ros_melodic.sh` for Ubuntu 18.04 if ROS is not installed
+* `bash ./build_setup.sh` for Ubuntu 16.04 or `bash ./build_setup.sh` for Ubuntu 18.04
+* `source /opt/ros/kinetic/setup.bash` for Ubuntu 16.04 or `source /opt/ros/melodic/setup.bash` for Ubuntu 18.04
+#### Build
 * `catkin build`
 
 ### To Run
 * `source devel/setup.bash`
 * `roslaunch bot bot.launch`
 
-### NetworkTables
 
+## Usage
+### NetworkTables
 The program communicates with the roboRIO via the table `roborio-jetson`.
 
 | Table Entry | Modified By | Type | Purpose |
@@ -49,3 +49,18 @@ The program communicates with the roboRIO via the table `roborio-jetson`.
 | `x-offset` | Jetson | double (inches) | The left-right distance offset of the target. |
 | `y-offset` | Jetson | double (inches) | The forwards-backwards distance offset of the target. |
 | `restart-server` | roboRIO | boolean | If set to true, the camera server will be restarted. |
+
+### Camera Streams
+Once the program has started, there will be 2 camera streams available at once on port 1180:
+* `/stream?topic=/main_camera/image_raw`
+* `/stream?topic=/secondary_camera/image_raw`
+
+You can also append additional options to the stream, such as `quality`, `width` and `height`. For example:\
+`http://10.61.35.19:1180/stream?topic=/main_camera/image_raw&quality=25&width=640&height=360`\
+will give you the main camera stream (Jetson at IP 10.61.35.19), with quality at 35% and dimensions 640x360.
+The stream is in MJPEG, so you can view it directly from the SmartDashboard.
+
+Additionally, calling the service `/vision_processing_node/publish_processed` with data `true` will activate two more streams:
+* `/stream?topic=/vision_processing_node/thresholded_image`
+* `/stream?topic=/vision_processing_node/identified_targets`
+These streams are only updated when vision is active, and contain the image after thresholding, and the identified targets, respectively.

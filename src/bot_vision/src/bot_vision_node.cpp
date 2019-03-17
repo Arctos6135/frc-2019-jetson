@@ -57,8 +57,17 @@ int camera_vert_f;
 double tape_height = 5.825572030188476;
 double tape_gap = 11.0629666927;
 
-inline float combined_area(const std::pair<cv::RotatedRect, cv::RotatedRect> &rects) {
-    return rects.first.size.area() + rects.second.size.area();
+double get_distance_v(double, double);
+inline double get_rect_distance(const cv::RotatedRect &rect) {
+	cv::Point2f points[4];
+	rect.points(points);
+	double min_y = std::min(points[0].y, std::min(points[1].y, std::min(points[2].y, points[3].y)));
+    double max_y = std::max(points[0].y, std::max(points[1].y, std::max(points[2].y, points[3].y)));
+	return get_distance_v(max_y, min_y);
+}
+
+inline float rank(const std::pair<cv::RotatedRect, cv::RotatedRect> &rects) {
+    return get_rect_distance(rects.first) + get_rect_distance(rects.second);
 }
 
 // The contour is checked with this function for validity
@@ -135,10 +144,78 @@ inline double get_distance_v(const double high, const double low) {
     double phi = get_vert_angle(high);
     return tape_height / (std::tan(phi) - std::tan(theta));
 }
+
+// Keeps track of whether vision processing is on
+bool vision_on = false;
+// Publisher for exposure control
+ros::Publisher exposure_pub;
+// Vision and normal exposure values
+int vision_exposure, normal_exposure;
+// Callback for the service
+bool enable_vision_callback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &resp) {
+	if(req.data) {
+		vision_on = true;
+		// Publish the exposure to set it
+		std_msgs::Int32 m;
+		m.data = vision_exposure;
+		exposure_pub.publish(m);
+
+		ROS_INFO_STREAM("Vision has been turned ON.");
+	}
+	else {
+		vision_on = false;
+		
+		std_msgs::Int32 m;
+		m.data = normal_exposure;
+		exposure_pub.publish(m);
+		
+		ROS_INFO_STREAM("Vision has been turned OFF.");
+	}
+	
+	resp.success = true;
+	return true;
+}
+
+bool publish_processed = false;
+bool publish_processed_callback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &resp) {
+	publish_processed = req.data;
+	resp.success = true;
+	return true;
+}
+
+image_transport::Publisher processed_mono_pub;
+image_transport::Publisher processed_targets_pub;
+
+inline void publish_image(const cv::Mat &img, image_transport::Publisher &pub) {
+	sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", img).toImageMsg();
+	pub.publish(msg);
+}
+
+void draw_rotatedrect(cv::Mat &img, const cv::RotatedRect &rect, const cv::Scalar &color = cv::Scalar(0, 0, 255), int thickness = 3) {
+	cv::Point2f points[4];
+	rect.points(points);
+
+	cv::line(img, points[0], points[1], color, thickness);
+	cv::line(img, points[1], points[2], color, thickness);
+	cv::line(img, points[2], points[3], color, thickness);
+	cv::line(img, points[3], points[0], color, thickness);
+}
+void draw_combined_rect(cv::Mat &img, const std::pair<cv::RotatedRect, cv::RotatedRect> &rects, const cv::Scalar &color = cv::Scalar(0, 0, 255), int thickness = 5) {
+	cv::Point2f points[8];
+	rects.first.points(points);
+	rects.second.points(points + 4); // I love pointers
+	std::vector<cv::Point2f> pts;
+	pts.assign(points, points + 8);
+	auto rect = cv::boundingRect(pts);
+	cv::rectangle(img, rect.tl(), rect.br(), color, thickness);
+}
+
 // The image processing callback
 void image_callback(const sensor_msgs::ImageConstPtr& msg) {
 	if(vision_on) {
-		cv::Mat original_image = cv_bridge::toCvShare(msg, "bgr8")->image;
+		// Get a modifiable copy
+		// Since the camera images are either rgb8 or yuyv a copy has to be made anyways
+		cv::Mat original_image = cv_bridge::toCvCopy(msg, "bgr8")->image;
 		cv::Mat hsv, mono;
 		// Convert colour space
 		cv::cvtColor(original_image, hsv, cv::COLOR_BGR2HSV_FULL);
@@ -150,6 +227,10 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
 				cv::Point(morph_kernel_size / 2, morph_kernel_size / 2));
 		cv::morphologyEx(mono, mono, cv::MORPH_OPEN, kernel);
 		cv::morphologyEx(mono, mono, cv::MORPH_CLOSE, kernel);
+
+		if(publish_processed) {
+			publish_image(mono, processed_mono_pub);
+		}
 
         // Find contours
         std::vector<std::vector<cv::Point>> contours;
@@ -187,16 +268,32 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
         double x_angle = NAN;
         // Verify that there are one or more pairs of contours that match
         if(matching.size()) {
-            // Find the biggest pair
-            int biggest = -1;
+            // Find the best pair
+            int best = -1;
             for(int i = 0; i < matching.size(); i++) {
-                if(biggest == -1 || combined_area(matching[i]) > combined_area(matching[biggest])) {
-                    biggest = i;
+				// Note: the rank function was changed to give a low number for high ranks.
+                if(best == -1 || rank(matching[i]) < rank(matching[best])) {
+                    best = i;
                 }
             }
+
+			if(publish_processed) {
+				for(int i = 0; i < matching.size(); i ++) {
+					if(i != best) {
+						draw_rotatedrect(original_image, matching[i].first);
+						draw_rotatedrect(original_image, matching[i].second);
+						draw_combined_rect(original_image, matching[i]);
+					}
+				}
+				draw_rotatedrect(original_image, matching[best].first, cv::Scalar(0, 255, 0));
+				draw_rotatedrect(original_image, matching[best].second, cv::Scalar(0, 255, 0));
+				draw_combined_rect(original_image, matching[best], cv::Scalar(0, 255, 0));
+
+				publish_image(original_image, processed_targets_pub);
+			}
 			
 			// Calculate the midpoint
-            auto &tapes = matching[biggest];
+            auto &tapes = matching[best];
             cv::Point2f mid1 = tapes.first.center, mid2 = tapes.second.center;
             cv::Point2f mid((mid1.x + mid2.x) / 2, (mid1.y + mid2.y) / 2);
 
@@ -204,16 +301,8 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
 			double angle = get_horiz_angle(mid);
 
             // Calculate the distances from y coordinates of each piece of tape
-            cv::Point2f points[4];
-            tapes.first.points(points);
-            double min_y = std::min(points[0].y, std::min(points[1].y, std::min(points[2].y, points[3].y)));
-            double max_y = std::max(points[0].y, std::max(points[1].y, std::max(points[2].y, points[3].y)));
-            double dist1 = get_distance_v(max_y, min_y);
-
-            tapes.second.points(points);
-            min_y = std::min(points[0].y, std::min(points[1].y, std::min(points[2].y, points[3].y)));
-            max_y = std::max(points[0].y, std::max(points[1].y, std::max(points[2].y, points[3].y)));
-            double dist2 = get_distance_v(max_y, min_y);
+            double dist1 = get_rect_distance(tapes.first);
+            double dist2 = get_rect_distance(tapes.second);
 
 
             // Calculate the angle difference
@@ -310,37 +399,6 @@ void image_callback(const sensor_msgs::ImageConstPtr& msg) {
 	}
 }
 
-// Keeps track of whether vision processing is on
-bool vision_on = false;
-// Publisher for exposure control
-ros::Publisher exposure_pub;
-// Vision and normal exposure values
-int vision_exposure, normal_exposure;
-// Callback for the service
-bool enable_vision_callback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &resp) {
-	if(req.data) {
-		vision_on = true;
-		// Publish the exposure to set it
-		std_msgs::Int32 m;
-		m.data = vision_exposure;
-		exposure_pub.publish(m);
-
-		ROS_INFO_STREAM("Vision has been turned ON.");
-	}
-	else {
-		vision_on = false;
-		
-		std_msgs::Int32 m;
-		m.data = normal_exposure;
-		exposure_pub.publish(m);
-		
-		ROS_INFO_STREAM("Vision has been turned OFF.");
-	}
-	
-	resp.success = true;
-	return true;
-}
-
 int main(int argc, char **argv) {
 	// Init ROS
 	ros::init(argc, argv, "bot_vision_node");
@@ -353,6 +411,7 @@ int main(int argc, char **argv) {
     x_offset_pub = node_handle.advertise<std_msgs::Float64>("result_x_offset", 2);
     y_offset_pub = node_handle.advertise<std_msgs::Float64>("result_y_offset", 2);
 	exposure_pub = node_handle.advertise<std_msgs::Int32>("/main_camera/exposure", 2);
+
 	// Get the parameter values
 	node_handle.param("vision_exposure", vision_exposure, 5);
 	node_handle.param("normal_exposure", normal_exposure, 0);
@@ -384,9 +443,13 @@ int main(int argc, char **argv) {
 	// Subscribe to the raw image topic
 	// Use a queue size of 1 so unprocessed images are discarded
 	image_transport::Subscriber im_sub = im_transport.subscribe("/main_camera/image_raw", 1, image_callback);
+	// Set up topics for processed images
+	processed_mono_pub = im_transport.advertise("thresholded_image", 1);
+	processed_targets_pub = im_transport.advertise("identified_targets", 1);
 
 	// Advertise the service
-	ros::ServiceServer server = node_handle.advertiseService("enable_vision", enable_vision_callback);
+	ros::ServiceServer enable_vision_server = node_handle.advertiseService("enable_vision", enable_vision_callback);
+	ros::ServiceServer publish_processed_server = node_handle.advertiseService("publish_processed", publish_processed_callback);
 
 	// Run forever until shutdown
 	ros::spin();

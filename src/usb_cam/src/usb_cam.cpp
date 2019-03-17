@@ -383,19 +383,30 @@ int UsbCam::init_mjpeg_decoder(int image_width, int image_height)
   avframe_rgb_ = av_frame_alloc();
 #endif
 
+#if LIBAVCODEC_VERSION_MAJOR >= 55
+  avpicture_alloc((AVPicture *)avframe_rgb_, AV_PIX_FMT_RGB24, image_width, image_height);
+#else
   avpicture_alloc((AVPicture *)avframe_rgb_, PIX_FMT_RGB24, image_width, image_height);
-
+#endif
   avcodec_context_->codec_id = AV_CODEC_ID_MJPEG;
   avcodec_context_->width = image_width;
   avcodec_context_->height = image_height;
 
-#if LIBAVCODEC_VERSION_MAJOR > 52
+#if LIBAVCODEC_VERSION_MAJOR >= 55
+  avcodec_context_->pix_fmt = AV_PIX_FMT_YUV422P;
+  avcodec_context_->codec_type = AVMEDIA_TYPE_VIDEO;
+#elif LIBAVCODEC_VERSION_MAJOR > 52
   avcodec_context_->pix_fmt = PIX_FMT_YUV422P;
   avcodec_context_->codec_type = AVMEDIA_TYPE_VIDEO;
 #endif
 
+#if LIBAVCODEC_VERSION_MAJOR >= 55
+  avframe_camera_size_ = avpicture_get_size(AV_PIX_FMT_YUV422P, image_width, image_height);
+  avframe_rgb_size_ = avpicture_get_size(AV_PIX_FMT_RGB24, image_width, image_height);
+#else
   avframe_camera_size_ = avpicture_get_size(PIX_FMT_YUV422P, image_width, image_height);
   avframe_rgb_size_ = avpicture_get_size(PIX_FMT_RGB24, image_width, image_height);
+#endif
 
   /* open it */
   if (avcodec_open2(avcodec_context_, avcodec_, &avoptions_) < 0)
@@ -445,13 +456,22 @@ void UsbCam::mjpeg2rgb(char *MJPEG, int len, char *RGB, int NumPixels)
     return;
   }
 
+#if LIBAVCODEC_VERSION_MAJOR >= 55
+  video_sws_ = sws_getContext(xsize, ysize, avcodec_context_->pix_fmt, xsize, ysize, AV_PIX_FMT_RGB24, SWS_BILINEAR, NULL,
+			      NULL,  NULL);
+#else
   video_sws_ = sws_getContext(xsize, ysize, avcodec_context_->pix_fmt, xsize, ysize, PIX_FMT_RGB24, SWS_BILINEAR, NULL,
 			      NULL,  NULL);
+#endif
   sws_scale(video_sws_, avframe_camera_->data, avframe_camera_->linesize, 0, ysize, avframe_rgb_->data,
             avframe_rgb_->linesize);
   sws_freeContext(video_sws_);
 
+#if LIBAVCODEC_VERSION_MAJOR >= 55
+  int size = avpicture_layout((AVPicture *)avframe_rgb_, AV_PIX_FMT_RGB24, xsize, ysize, (uint8_t *)RGB, avframe_rgb_size_);
+#else
   int size = avpicture_layout((AVPicture *)avframe_rgb_, PIX_FMT_RGB24, xsize, ysize, (uint8_t *)RGB, avframe_rgb_size_);
+#endif
   if (size != avframe_rgb_size_)
   {
     ROS_ERROR("webcam: avpicture_layout error: %d", size);
