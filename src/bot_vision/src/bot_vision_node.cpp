@@ -58,12 +58,13 @@ double tape_height = 5.825572030188476;
 double tape_gap = 11.0629666927;
 
 double get_distance_v(double, double);
+double get_distance(double, double, double);
 inline double get_rect_distance(const cv::RotatedRect &rect) {
 	cv::Point2f points[4];
 	rect.points(points);
 	double min_y = std::min(points[0].y, std::min(points[1].y, std::min(points[2].y, points[3].y)));
     double max_y = std::max(points[0].y, std::max(points[1].y, std::max(points[2].y, points[3].y)));
-	return get_distance_v(max_y, min_y);
+	return get_distance(max_y, min_y, rect.center.x);
 }
 
 inline float rank(const std::pair<cv::RotatedRect, cv::RotatedRect> &rects) {
@@ -124,14 +125,14 @@ bool is_valid_pair(const std::pair<cv::RotatedRect, cv::RotatedRect> &rects, con
 	return false;
 }
 
-inline double get_horiz_angle(const double x) {
+inline double get_horiz_angle(double x) {
     double slope = (x - camera_width / 2) / camera_horiz_f;
     return std::atan(slope);
 }
 inline double get_horiz_angle(const cv::Point2f &point) {
 	return get_horiz_angle(point.x);
 }
-inline double get_vert_angle(const double y) {
+inline double get_vert_angle(double y) {
     double slope = (y - camera_height / 2) / camera_vert_f;
     return std::atan(slope);
 }
@@ -139,10 +140,13 @@ inline double get_vert_angle(const cv::Point2f &point) {
     return get_vert_angle(point.y);
 }
 
-inline double get_distance_v(const double high, const double low) {
+inline double get_distance_v(double high, double low) {
     double theta = get_vert_angle(low);
     double phi = get_vert_angle(high);
     return tape_height / (std::tan(phi) - std::tan(theta));
+}
+inline double get_distance(double high, double low, double x) {
+	return get_distance_v(low, high) * (1 / std::cos(get_horiz_angle(x)));
 }
 
 // Keeps track of whether vision processing is on
