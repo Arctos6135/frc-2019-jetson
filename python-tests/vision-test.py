@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from math import tan, atan, pi
+from math import *
 
 thresh_high_h = 130
 thresh_high_s = 255
@@ -37,7 +37,11 @@ def midpoint(a, b):
     return ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
 
 def get_vert_angle(y):
-    slope = (y - camera_width / 2) / camera_vert_f
+    slope = (y - camera_height / 2) / camera_vert_f
+    return atan(slope)
+
+def get_horiz_angle(x):
+    slope = (x - camera_width / 2) / camera_horiz_f
     return atan(slope)
 
 def get_distance_v(low, high):
@@ -45,16 +49,20 @@ def get_distance_v(low, high):
     phi = get_vert_angle(high)
     return tape_height / (tan(phi) - tan(theta))
 
+def get_distance(low, high, x):
+    print("Horiz Angle", get_horiz_angle(x))
+    return get_distance_v(low, high) * (1 / cos(get_horiz_angle(x)))
+
 def get_rect_distance(rect):
     points = cv2.boxPoints(rect)
     high = max(points[0][1], max(points[1][1], max(points[2][1], points[3][1])))
     low = min(points[0][1], min(points[1][1], min(points[2][1], points[3][1])))
-    return get_distance_v(low, high)
+    return get_distance(low, high, rect[0][0])
 
 def rank(rects):
     d0 = get_rect_distance(rects[0])
     d1 = get_rect_distance(rects[1])
-    print("Distances", d0, d1)
+    print("Distances", d0, d1, " [Center " + str(midpoint(rects[0][0], rects[1][0])) + "]")
     return 1.0 / (d0 + d1)
 
 def is_valid_contour(contour, rect):
