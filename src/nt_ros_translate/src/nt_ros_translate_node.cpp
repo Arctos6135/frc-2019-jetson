@@ -106,6 +106,9 @@ int main(int argc, char **argv) {
 	table->PutBoolean("vision-online", true);
 	ROS_INFO("vision-online has been set to true");
 
+	ROS_INFO("Arctos 6135 Vision Code v1.1");
+	table->PutString("version", "v1.1");
+
 	ros::Rate rate(25);
 
 	while(ros::ok()) {
