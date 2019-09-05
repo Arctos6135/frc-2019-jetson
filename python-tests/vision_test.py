@@ -50,7 +50,7 @@ def get_distance_v(low, high):
     return tape_height / (tan(phi) - tan(theta))
 
 def get_distance(low, high, x):
-    print("Horiz Angle", get_horiz_angle(x))
+    # print("Horiz Angle", get_horiz_angle(x))
     return get_distance_v(low, high) * (1 / cos(get_horiz_angle(x)))
 
 def get_rect_distance(rect):
@@ -62,7 +62,7 @@ def get_rect_distance(rect):
 def rank(rects):
     d0 = get_rect_distance(rects[0])
     d1 = get_rect_distance(rects[1])
-    print("Distances", d0, d1, " [Center " + str(midpoint(rects[0][0], rects[1][0])) + "]")
+    # print("Distances", d0, d1, " [Center " + str(midpoint(rects[0][0], rects[1][0])) + "]")
     return 1.0 / (d0 + d1)
 
 def is_valid_contour(contour, rect):
@@ -91,7 +91,7 @@ def is_valid_pair(rects, all_rects):
         for rect in all_rects:
             if rect != rects[0] and rect != rects[1]:
                 if rect[0][0] > left[0][0] and rect[0][0] < right[0][0]:
-                    print(left[0], right[0], rect[0])
+                    # print(left[0], right[0], rect[0])
                     return False
         return True
     else:
@@ -105,6 +105,8 @@ def draw_rect_of_rects(img, rect0, rect1, color=(255, 0, 0), thickness=4):
     points = np.append(cv2.boxPoints(rect0), cv2.boxPoints(rect1), axis=0)
     x, y, w, h = cv2.boundingRect(points)
     cv2.rectangle(img, (x,y), (x+w,y+h), color, thickness)
+    d = (get_rect_distance(rect0) + get_rect_distance(rect1)) / 2
+    cv2.putText(img, "Distance: {0:.3f}".format(d), (x, y - 6), cv2.FONT_HERSHEY_DUPLEX, 0.5, color)
 
 colors = [
     (0, 0, 0xFF),
@@ -115,13 +117,16 @@ colors = [
     (0xFF, 0, 0xFF)
 ]
 
-def process_image(img):
+def get_rects(img):
+    # Convert to hsv and thresh
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV_FULL)
     mono = cv2.inRange(hsv, thresh_low, thresh_high)
+    # Apply morphological operations 
     kern = cv2.getStructuringElement(cv2.MORPH_RECT, (morph_kernel_size, morph_kernel_size))
     cv2.morphologyEx(mono, cv2.MORPH_OPEN, kern)
     cv2.morphologyEx(mono, cv2.MORPH_CLOSE, kern)
 
+    # Find contours and min area rects
     _, contours, _ = cv2.findContours(mono, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     rects = []
     for contour in contours:
@@ -129,12 +134,18 @@ def process_image(img):
         
         if is_valid_contour(contour, rect):
             rects.append(rect)
-    
+
+    # Filter and get matching pairs
     matching = []
     for i in range(0, len(rects)):
         for j in range(i + 1, len(rects)):
             if abs(rects[i][0][1] - rects[j][0][1]) <= max_y_diff and is_valid_pair([rects[i], rects[j]], rects):
                 matching.append([rects[i], rects[j]])
+    
+    return matching
+
+def process_image(img):
+    matching = get_rects(img)
     if len(matching) > 0:
         _, width, _ = img.shape
         matching.sort(reverse = True, key = rank)
