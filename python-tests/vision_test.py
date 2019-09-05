@@ -106,7 +106,7 @@ def draw_rect_of_rects(img, rect0, rect1, color=(255, 0, 0), thickness=4):
     x, y, w, h = cv2.boundingRect(points)
     cv2.rectangle(img, (x,y), (x+w,y+h), color, thickness)
     d = (get_rect_distance(rect0) + get_rect_distance(rect1)) / 2
-    cv2.putText(img, "Distance: {0:.3f}".format(d), (x, y - 6), cv2.FONT_HERSHEY_DUPLEX, 0.5, color)
+    cv2.putText(img, "Distance: {0:.3f}".format(d), (x, y - 6), cv2.FONT_HERSHEY_DUPLEX, 2, color)
 
 colors = [
     (0, 0, 0xFF),
@@ -153,16 +153,17 @@ def process_image(img):
             draw_rect(img, pair[0], color)
             draw_rect(img, pair[1], color)
             draw_rect_of_rects(img, pair[0], pair[1], color)
-        cv2.imshow("Targets", img)
     else:
-        cv2.imshow("Targets", img)
-        print("No targets found!")
+        # print("No targets found!")
+        pass
 
 
 if __name__ == "__main__":
     from glob import glob
-    for img in glob("**/*.png", recursive=True):
-        print(f"\u001b[1;32mProcessing {img}\u001b[0m")
-        process_image(cv2.imread(img))
+    for img_file in glob("**/*.png", recursive=True):
+        print(f"\u001b[1;32mProcessing {img_file}\u001b[0m")
+        img = cv2.imread(img_file)
+        process_image(img)
+        cv2.imshow("Targets", img)
         cv2.waitKey(-1)
 
