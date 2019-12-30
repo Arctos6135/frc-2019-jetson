@@ -1,0 +1,13 @@
+[Unit]
+Description=Team Arctos 6135's 2019 ROS Service, made with help from Matthew Mirvish
+BindsTo=dev-video0.device
+After=dev-video0.device
+
+[Service]
+ExecStart=/bin/bash -c "source /opt/ros/kinetic/setup.bash;source /6135/2019/deepspace/devel/setup.bash;roslaunch bot bot.launch;echo FRC 2019 ROS Service Started."
+Type=idle
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
